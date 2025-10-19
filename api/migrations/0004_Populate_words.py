@@ -24,4 +24,5 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(populate_words),
+        migrations.RunSQL("UPDATE sqlite_sequence SET seq = 0 WHERE sqlite_sequence.name = 'api_word';"),
     ]

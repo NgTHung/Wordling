@@ -8,7 +8,6 @@ def get_default_guess_distribution():
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    games_played = models.IntegerField(default=0)
     games_won = models.IntegerField(default=0)
     current_streak = models.IntegerField(default=0)
     max_streak = models.IntegerField(default=0)
@@ -25,6 +24,9 @@ class UserProfile(models.Model):
         if self.games_played == 0:
             return 0
         return round((self.games_won / self.games_played) * 100)
+    @property
+    def games_played(self):
+        return sum(self.guess_distribution)
 
 # This is a Django Signal. It ensures that whenever a new User is created,
 # a corresponding UserProfile is automatically created with it.

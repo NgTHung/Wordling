@@ -41,6 +41,7 @@ class GameView(TemplateView):
                 del request.session["game_id"]
         if not request.session.get("game_id"):
             if request.user.is_authenticated:
+                request.session["username"] = request.user.username
                 game = Game.objects.filter(user=request.user, status=Game.GameStatus.IN_PROGRESS).first()
                 if game:
                     request.session["game_id"] = game.id
@@ -50,7 +51,7 @@ class GameView(TemplateView):
                 user = None
             max_id = Word.objects.aggregate(max_id=Max('id'))['max_id']
             random_id = random.randint(1, max_id)
-            word = Word.objects.filter(id__gte=random_id).first()
+            word = Word.objects.filter(id=random_id).first()
             game = Game.objects.create(user=user, key=word.value)
             request.session["game_id"] = game.id
         return super().get(request, *args, **kwargs)

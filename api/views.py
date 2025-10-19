@@ -7,6 +7,18 @@ from api.serializers import GameSerializer, GuessSerializer, UserSerializer
 from rest_framework import permissions
 from rest_framework.reverse import reverse
 from api.utils import color_word
+from rest_framework import authentication
+from django.http import HttpRequest
+
+class SubSessionAuthentication(authentication.SessionAuthentication):
+    def authenticate(self, request: HttpRequest):
+        if request.session.get("username"):
+            try:
+                user = User.objects.get(username=request.session.get("username"))
+                return (user, None)
+            except User.DoesNotExist:
+                return None
+        return None
 
 class GameList(generics.ListCreateAPIView):
     queryset = Game.objects.all()
@@ -37,6 +49,7 @@ class GuessList(generics.ListCreateAPIView):
     queryset = Guess.objects.all()
     serializer_class = GuessSerializer
     permission_classes = [permissions.AllowAny]
+    authentication_classes = [SubSessionAuthentication]
     def create(self, request, *args, **kwargs):
         word_value = request.data.get('word')
         if request.session.get("game_id") is None:
@@ -55,12 +68,12 @@ class GuessList(generics.ListCreateAPIView):
             return Response({'error': 'Word has already been guessed.'}, status=400)
         if len(word_value) != len(game.key):
             return Response({'error': 'Word length mismatch.'}, status=400)
+        print(word_value, game.key)
         serializer = self.get_serializer(data={'game': game.pk, 'value': word.pk, 'is_correct': word_value == game.key})
         if serializer.is_valid():
             guess_count = Guess.objects.filter(game=game).count()
             if request.user.is_authenticated:
                 profile = request.user.userprofile
-                profile.games_played += 1
                 if word_value == game.key:
                     profile.games_won += 1
                     profile.current_streak += 1
