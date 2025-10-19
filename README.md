@@ -9,6 +9,14 @@ A modern, full-featured implementation of the popular word-guessing game Wordle,
 
 ---
 
+## Demo
+
+Check out Wordling in action:
+
+![Wordling Demo](ezgif.com-speed.gif)
+
+---
+
 ## Key Features
 
 - **Classic Wordle Gameplay**
