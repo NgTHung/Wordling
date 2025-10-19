@@ -1,8 +1,12 @@
 from django.shortcuts import redirect
 from django.views.generic import TemplateView, ListView
+from django.db.models import Max
+
 from accounts.models import UserProfile
 from api.models import Game, Guess, Word
-from django.contrib.auth.models import User
+from api.utils import color_word
+
+import random
 # Create your views here.
 class GameView(TemplateView):
     template_name = "game.html"
@@ -17,24 +21,10 @@ class GameView(TemplateView):
                     del self.request.session["game_id"]
                     return context
                 history = []
-                for guess in Guess.objects.filter(game=game).order_by('created_at'):
-                    ret = ''
+                queryset = Guess.objects.filter(game=game).order_by('created_at').select_related('value')
+                for guess in queryset:
                     word_value = guess.value.value
-                    m = {}
-                    for char in game.key:
-                        m[char] = m.get(char, 0) + 1
-                    for idx in range(len(game.key)):
-                        if word_value[idx] == game.key[idx]:
-                            ret += 'G'  # Green
-                            m[word_value[idx]] -= 1
-                        elif word_value[idx] in game.key:
-                            ret += 'Y'  # Yellow
-                            if m[word_value[idx]] > 0:
-                                m[word_value[idx]] -= 1
-                            else:
-                                ret = ret[:-1] + 'B'
-                        else:
-                            ret += 'B'  # Black
+                    ret = color_word(word_value, game.key)
                     history.append({'word': word_value, 'result': ret})
                 context['game_id'] = game.pk
                 context['game_history'] = (history)
@@ -57,8 +47,10 @@ class GameView(TemplateView):
                     return super().get(request, *args, **kwargs)
                 user = request.user
             else:
-                user = User.objects.get_or_create(username="Annonymous")[0]
-            word = Word.objects.order_by('?').first()
+                user = None
+            max_id = Word.objects.aggregate(max_id=Max('id'))['max_id']
+            random_id = random.randint(1, max_id)
+            word = Word.objects.filter(id__gte=random_id).first()
             game = Game.objects.create(user=user, key=word.value)
             request.session["game_id"] = game.id
         return super().get(request, *args, **kwargs)

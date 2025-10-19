@@ -8,11 +8,11 @@ class Game(models.Model):
         WON = 'WON', 'Won'
         LOST = 'LOST', 'Lost'
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING)
-    key = models.CharField(max_length=100, unique=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    key = models.CharField(max_length=100, unique=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    status = models.CharField(max_length=20, choices=GameStatus.choices, default=GameStatus.IN_PROGRESS)
+    status = models.CharField(max_length=20, choices=GameStatus.choices, default=GameStatus.IN_PROGRESS, db_index=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -24,8 +24,8 @@ class Word(models.Model):
         return self.value
     
 class Guess(models.Model):
-    game = models.ForeignKey(Game, on_delete=models.CASCADE)
-    value = models.ForeignKey(Word, on_delete=models.DO_NOTHING)
+    game = models.ForeignKey(Game, on_delete=models.PROTECT)
+    value = models.ForeignKey(Word, on_delete=models.PROTECT)
     is_correct = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from api.models import Game, Guess, Word
 from api.serializers import GameSerializer, GuessSerializer, UserSerializer
 from rest_framework import permissions
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
+from rest_framework.reverse import reverse
+from api.utils import color_word
 
 class GameList(generics.ListCreateAPIView):
     queryset = Game.objects.all()
@@ -33,12 +33,10 @@ class GameDetail(generics.RetrieveUpdateAPIView):
             data['key'] = '*****' 
         return Response(data)
     
-@method_decorator(csrf_exempt, name='dispatch')
 class GuessList(generics.ListCreateAPIView):
     queryset = Guess.objects.all()
     serializer_class = GuessSerializer
     permission_classes = [permissions.AllowAny]
-    authentication_classes = []
     def create(self, request, *args, **kwargs):
         word_value = request.data.get('word')
         if request.session.get("game_id") is None:
@@ -73,26 +71,11 @@ class GuessList(generics.ListCreateAPIView):
                     profile.current_streak = 0
                 profile.save()
             serializer.save(game=game, value=word, is_correct=(word_value == game.key))
-            ret = ''
-            m = {}
-            for char in game.key:
-                m[char] = m.get(char, 0) + 1
-            for idx in range(len(game.key)):
-                if word_value[idx] == game.key[idx]:
-                    ret += 'G'  # Green
-                    m[word_value[idx]] -= 1
-                elif word_value[idx] in game.key:
-                    ret += 'Y'  # Yellow
-                    if m[word_value[idx]] > 0:
-                        m[word_value[idx]] -= 1
-                    else:
-                        ret = ret[:-1] + 'B'
-                else:
-                    ret += 'B'  # Black
+            ret = color_word(word_value, game.key)
             if word_value == game.key:
                 game.status = Game.GameStatus.WON
                 game.save()
-            elif guess_count >= 6:
+            elif guess_count >= 5:
                 game.status = Game.GameStatus.LOST
                 game.save()
             return Response({'result': ret}, status=201)
@@ -124,3 +107,13 @@ class GiveUpAPIView(APIView):
         game.status = Game.GameStatus.LOST
         game.save()
         return Response({'message': 'Game marked as lost.', 'key': game.key}, status=200)
+    
+class ApiRootView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def get(self, request, format=None):
+        return Response({
+            'games': reverse('game_list', request=request, format=format),
+            'guesses': reverse('guess_list', request=request, format=format),
+            'users': reverse('user_list', request=request, format=format),
+            'giveup': reverse('give_up', request=request, format=format),
+        })
