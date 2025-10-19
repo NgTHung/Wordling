@@ -46,10 +46,8 @@
         $('#toast-confirm-give-up').on('click', function() {
             hideConfirmationToast();
             
-            $.get('/api/giveup/').then(function() {
-                $.get('/api/games/{{ game_id }}/').done(function(gameData) {
-                    showModal(false, gameData.key);
-                });
+            $.get('/api/giveup/').then(function(data) {
+                showModal(false, data.key);
             });
         });
         $('#toast-cancel-give-up').on('click', function() {

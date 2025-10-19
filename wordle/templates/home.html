@@ -25,6 +25,14 @@
         
         <div class="hero-actions">
             <a href="{% url 'game' %}" class="hero-button">Play Now</a>
+            
+            <!-- ADD THIS LOGIN LINK -->
+            {% if not user.is_authenticated %}
+                <p class="secondary-action-text">
+                    Already have an account? <a href="{% url 'login' %}" class="secondary-action-link">Log In</a>
+                </p>
+            {% endif %}
+            <!-- END OF ADDED LINK -->
         </div>
 
         <!-- New Feature Highlights Section -->

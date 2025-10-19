@@ -50,11 +50,15 @@ class GameView(TemplateView):
             except Game.DoesNotExist:
                 del request.session["game_id"]
         if not request.session.get("game_id"):
-            word = Word.objects.order_by('?').first()
-            if request.user.is_anonymous:
-                user = User.objects.get_or_create(username="Annonymous")[0]
-            else:
+            if request.user.is_authenticated:
+                game = Game.objects.filter(user=request.user, status=Game.GameStatus.IN_PROGRESS).first()
+                if game:
+                    request.session["game_id"] = game.id
+                    return super().get(request, *args, **kwargs)
                 user = request.user
+            else:
+                user = User.objects.get_or_create(username="Annonymous")[0]
+            word = Word.objects.order_by('?').first()
             game = Game.objects.create(user=user, key=word.value)
             request.session["game_id"] = game.id
         return super().get(request, *args, **kwargs)

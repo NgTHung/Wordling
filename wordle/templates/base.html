@@ -55,6 +55,15 @@
         </div>
         {% endif %}
         <!-- This is where the main content of your pages will go. -->
+         {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                    <div class="message {{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
         {% block content %}
         {% endblock %}
     </main>

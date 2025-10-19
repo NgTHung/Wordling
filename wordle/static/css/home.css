@@ -221,3 +221,33 @@ body::before {
     color: #a0a0a0;
     line-height: 1.4;
 }
+
+/* --- Add these styles for the secondary login link on the home page --- */
+
+.hero-actions {
+    /* Add this to make the new text appear below the button */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem; /* Creates space between the button and the text */
+}
+
+.secondary-action-text {
+    margin: 0;
+    font-size: 1rem;
+    color: #a0a0a0; /* Muted gray for the text part */
+}
+
+.secondary-action-link {
+    color: var(--color-text); /* White, to stand out slightly */
+    font-weight: bold;
+    text-decoration: none;
+    border-bottom: 2px solid var(--color-present); /* Yellow underline */
+    padding-bottom: 2px;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.secondary-action-link:hover {
+    color: var(--color-present); /* Text turns yellow on hover */
+    border-color: var(--color-text); /* Underline turns white on hover */
+}

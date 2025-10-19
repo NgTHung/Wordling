@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from api.models import Game, Guess, Word
 from api.serializers import GameSerializer, GuessSerializer, UserSerializer
 from rest_framework import permissions
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 class GameList(generics.ListCreateAPIView):
     queryset = Game.objects.all()
@@ -30,11 +32,13 @@ class GameDetail(generics.RetrieveUpdateAPIView):
         if instance.status == Game.GameStatus.IN_PROGRESS:
             data['key'] = '*****' 
         return Response(data)
-
+    
+@method_decorator(csrf_exempt, name='dispatch')
 class GuessList(generics.ListCreateAPIView):
     queryset = Guess.objects.all()
     serializer_class = GuessSerializer
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
     def create(self, request, *args, **kwargs):
         word_value = request.data.get('word')
         if request.session.get("game_id") is None:
