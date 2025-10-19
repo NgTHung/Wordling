@@ -68,7 +68,6 @@ class GuessList(generics.ListCreateAPIView):
             return Response({'error': 'Word has already been guessed.'}, status=400)
         if len(word_value) != len(game.key):
             return Response({'error': 'Word length mismatch.'}, status=400)
-        print(word_value, game.key)
         serializer = self.get_serializer(data={'game': game.pk, 'value': word.pk, 'is_correct': word_value == game.key})
         if serializer.is_valid():
             guess_count = Guess.objects.filter(game=game).count()
