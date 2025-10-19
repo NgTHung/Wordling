@@ -1,8 +1,9 @@
-from django.urls import path, include
+from django.urls import path
 
-from wordle.views import HomeView
+from wordle.views import HomeView, LeaderboardView, GameView
 
 urlpatterns = [
-    path("accounts/", include("django.contrib.auth.urls")),
     path("", HomeView.as_view(), name="home"),
+    path("play/", GameView.as_view(), name="game"),
+    path('leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
 ]

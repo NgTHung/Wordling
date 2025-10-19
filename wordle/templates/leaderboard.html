@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/leaderboard.css' %}">
+{% endblock %}
+
+{% block title %}Leaderboard{% endblock %}
+
+{% block content %}
+<div class="leaderboard-container">
+    <h2>Leaderboard</h2>
+    <p class="leaderboard-subheading">Top players ranked by max streak</p>
+
+    <div class="table-wrapper">
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th class="rank">#</th>
+                    <th class="username">Player</th>
+                    <th>Max Streak</th>
+                    <th>Win %</th>
+                    <th>Played</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for profile in profiles %}
+                <tr>
+                    <td class="rank">{{ forloop.counter }}</td>
+                    <td class="username">{{ profile.user.username }}</td>
+                    <td>{{ profile.max_streak }}</td>
+                    <td>{{ profile.win_percentage }}%</td>
+                    <td>{{ profile.games_played }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No player data available yet. Be the first!</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

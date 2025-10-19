@@ -1,0 +1,223 @@
+/* =================================================================== */
+/*           NEW, MORE INTERESTING HOME PAGE STYLES                    */
+/* =================================================================== */
+
+/* --- 1. The Blurred Background Effect --- */
+/* --- NEW STYLES FOR THE BLURRED BACKGROUND AND BODY --- */
+
+body {
+    /* The body itself no longer holds the background image */
+    background-color: #121213; /* A solid fallback color */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative; /* Crucial for positioning the pseudo-element */
+    overflow-x: hidden; /* Prevents scrollbars from the scaled background */
+}
+
+/* This pseudo-element is our new background layer */
+body::before {
+    content: '';
+    position: fixed; /* Stays in place even when scrolling */
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1; /* Pushes it behind all other content */
+
+    /* Apply the background image here */
+    background-image: url('/static/img/background.png'); /* Ensure this path is correct */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    /* The magic: blur the background */
+    filter: blur(8px);
+    
+    /* Pro-tip: Slightly scale the background to hide blurry edges */
+    transform: scale(1.05);
+}
+/* --- NEW STYLES FOR THE "OPTIC LAYER" CONTENT PANELS --- */
+
+/* We target all your main content containers with a grouped selector */
+
+.hero-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex-grow: 1;
+    padding: 2rem;
+    width: 100%;
+    position: relative; /* Needed for the pseudo-element */
+}
+
+.hero-content {
+    background-color: rgba(44, 44, 46, 0.6); /* Fallback for older browsers */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2rem 3rem;
+    position: relative;
+    z-index: 1;
+    overflow: hidden; /* Ensures the blur stays within the rounded corners */
+
+    /* The frosted glass effect! */
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+}
+@supports not ((-webkit-backdrop-filter: none) or (backdrop-filter: none)) {
+  .hero-content {
+    background-color: rgba(44, 44, 46, 0.85); /* Darker fallback if blur isn't supported */
+  }
+}
+
+
+/* --- 2. The Thematic "Tile" Title --- */
+.hero-title {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.hero-title .tile {
+    width: 65px; /* Larger tiles for the title */
+    height: 65px;
+    font-size: 3rem;
+    border: 2px solid var(--color-border);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: white;
+    background-color: var(--color-background);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hero-title .tile:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+
+/* --- 3. Animations & New Content Styling --- */
+
+/* Keyframe for the title tile flip */
+@keyframes tile-flip-in {
+    from {
+        transform: rotateX(90deg);
+        opacity: 0;
+    }
+    to {
+        transform: rotateX(0);
+        opacity: 1;
+    }
+}
+
+/* Keyframe for other elements fading in */
+@keyframes fade-in-up {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Apply animations */
+.hero-title .tile {
+    animation: tile-flip-in 0.6s ease-out backwards;
+}
+.hero-subtitle {
+    animation: fade-in-up 0.7s ease-out 0.5s backwards;
+}
+.hero-actions {
+    animation: fade-in-up 0.7s ease-out 0.7s backwards;
+}
+.feature-highlights {
+    animation: fade-in-up 0.7s ease-out 0.9s backwards;
+}
+
+/* Add delays for each title tile to create a cascade effect */
+.hero-title .tile:nth-child(1) { animation-delay: 0.1s; }
+.hero-title .tile:nth-child(2) { animation-delay: 0.2s; }
+.hero-title .tile:nth-child(3) { animation-delay: 0.3s; }
+.hero-title .tile:nth-child(4) { animation-delay: 0.4s; }
+.hero-title .tile:nth-child(5) { animation-delay: 0.5s; }
+.hero-title .tile:nth-child(6) { animation-delay: 0.6s; }
+
+
+/* Feature Highlights Section */
+.feature-highlights {
+    display: flex;
+    gap: 2rem;
+    margin-top: 3.5rem;
+    border-top: 1px solid var(--color-border);
+    padding-top: 2rem;
+}
+
+.hero-button {
+    display: inline-block;
+    padding: 16px 40px;
+    border: none; /* Make sure there's no default border */
+    border-radius: 8px;
+    font-weight: bold;
+    text-decoration: none;
+    text-transform: uppercase;
+    font-size: 1.2rem;
+    background-color: var(--color-correct);
+    color: white;
+    box-shadow: 0 4px 15px rgba(83, 141, 78, 0.4);
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.hero-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(83, 141, 78, 0.5);
+}
+
+
+/* --- REVISED Feature Card and SVG Styles --- */
+.feature-highlights {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 3.5rem;
+    border-top: 1px solid var(--color-border);
+    padding-top: 2rem;
+    width: 100%; /* Ensure it takes up space */
+}
+
+.feature-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: 160px; /* Slightly wider */
+}
+
+/* This is the key fix for the SVGs */
+.feature-card svg {
+    width: 36px;
+    height: 36px;
+    stroke: var(--color-present); /* Use the theme's yellow for the icon stroke */
+    stroke-width: 1.5; /* A consistent, clean line thickness */
+    fill: none; /* Important: ensures only the lines are drawn */
+}
+
+.feature-card h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: white;
+}
+
+.feature-card p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #a0a0a0;
+    line-height: 1.4;
+}

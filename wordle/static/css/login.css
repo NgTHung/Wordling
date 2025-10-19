@@ -1,0 +1,117 @@
+/* --- Add these new styles for the login/auth forms --- */
+
+.form-container {
+    width: 100%;
+    max-width: 450px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #2c2c2e; /* Dark panel color, like the modal */
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+}
+
+.form-container h2 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 2.5rem;
+    letter-spacing: 0.05em;
+}
+
+.form-subheading {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 2rem;
+    color: #a0a0a0; /* A lighter gray for the subheading */
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #d7dadc;
+}
+
+/* Style for the input fields Django generates */
+.form-container input[type="text"],
+.form-container input[type="password"],
+.form-container input[type="email"] {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--color-background);
+    border: 2px solid var(--color-border);
+    color: var(--color-text);
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-container input:focus {
+    outline: none;
+    border-color: var(--color-correct);
+    box-shadow: 0 0 5px rgba(83, 141, 78, 0.7); /* Green glow on focus */
+}
+
+/* Style for the submit button */
+.form-container button[type="submit"] {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 1.2rem;
+    background-color: var(--color-correct);
+    color: var(--color-text);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: background-color 0.2s;
+}
+
+.form-container button[type="submit"]:hover {
+    background-color: #6aaa64; /* Lighter green on hover */
+}
+
+/* Styles for error messages */
+.error-list {
+    color: var(--color-error);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.error-list p {
+    margin: 0;
+    padding: 0;
+}
+
+.non-field-errors {
+    background-color: rgba(190, 41, 41, 0.15);
+    border: 1px solid var(--color-error);
+    border-radius: 5px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Styles for the links at the bottom of the form */
+.form-links {
+    text-align: center;
+    margin-top: 2rem;
+    font-size: 0.9rem;
+}
+
+.form-links p {
+    margin: 0.5rem 0;
+}
+
+.form-links a {
+    color: var(--color-correct);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.form-links a:hover {
+    text-decoration: underline;
+}

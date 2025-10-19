@@ -55,6 +55,19 @@ class GuessList(generics.ListCreateAPIView):
             return Response({'error': 'Word length mismatch.'}, status=400)
         serializer = self.get_serializer(data={'game': game.pk, 'value': word.pk, 'is_correct': word_value == game.key})
         if serializer.is_valid():
+            guess_count = Guess.objects.filter(game=game).count()
+            if request.user.is_authenticated:
+                profile = request.user.userprofile
+                profile.games_played += 1
+                if word_value == game.key:
+                    profile.games_won += 1
+                    profile.current_streak += 1
+                    if profile.current_streak > profile.max_streak:
+                        profile.max_streak = profile.current_streak
+                    profile.guess_distribution[guess_count] += 1
+                elif guess_count + 1 >= 6:
+                    profile.current_streak = 0
+                profile.save()
             serializer.save(game=game, value=word, is_correct=(word_value == game.key))
             ret = ''
             m = {}
@@ -75,7 +88,7 @@ class GuessList(generics.ListCreateAPIView):
             if word_value == game.key:
                 game.status = Game.GameStatus.WON
                 game.save()
-            elif Guess.objects.filter(game=game).count() >= 6:
+            elif guess_count >= 6:
                 game.status = Game.GameStatus.LOST
                 game.save()
             return Response({'result': ret}, status=201)

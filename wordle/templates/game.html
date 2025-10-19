@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_js %}
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script>
+        let toastTimeout;
+        function showConfirmationToast() {
+            // Clear any existing timer to prevent premature closing
+            clearTimeout(toastTimeout);
+            $('#confirmation-toast').addClass('visible');
+
+            // Automatically hide the toast after 7 seconds if no action is taken
+            toastTimeout = setTimeout(() => {
+                hideConfirmationToast();
+            }, 7000);
+        }
+        function hideConfirmationToast() {
+            // Clear the timer so it doesn't try to hide an already hidden toast
+            clearTimeout(toastTimeout);
+            $('#confirmation-toast').removeClass('visible');
+        }
+
+        function showModal(isWin, solution) {
+            const modal = $('#game-modal');
+            const title = $('#modal-title');
+            const solutionText = $('#modal-solution');
+            console.log('Showing modal with solution:', solution);
+            solutionText.text(solution.toUpperCase());
+
+            if (isWin) {
+                title.text('You Won!');
+            } else {
+                title.text('Game Over');
+            }
+
+            // Use a small delay to ensure the DOM is updated before the animation
+            setTimeout(() => {
+                modal.addClass('visible');
+            }, 200);
+        }
+
+        $('#give-up-button').on('click', function() {
+            showConfirmationToast();
+        });
+
+        $('#toast-confirm-give-up').on('click', function() {
+            hideConfirmationToast();
+            
+            $.get('/api/giveup/').then(function() {
+                $.get('/api/games/{{ game_id }}/').done(function(gameData) {
+                    showModal(false, gameData.key);
+                });
+            });
+        });
+        $('#toast-cancel-give-up').on('click', function() {
+            hideConfirmationToast();
+        });
+
+        $('#play-again-button').on('click', function() {
+            window.location.reload();
+        });
+
+        $('#refresh-button').on('click', function() {
+            $.get('/api/giveup/').done(function() {
+                window.location.reload();
+            });
+        });
+        keyboardState = {}
+        var currentValue = '';
+        var row_idx = 1;
+        var col_idx = 1;
+
+        const updateKeyboardState = (key, status) => {
+            const prevStatus = keyboardState[key];
+            if(prevStatus === 'correct') {
+                return;
+            }
+            if(prevStatus === 'present' && status === 'absent') {
+                return;
+            }
+            keyboardState[key] = status;
+            const button = $('button[data-key="' + key.toLowerCase() + '"]');
+            button.removeClass('correct present absent');
+            button.addClass(status);
+        }
+
+        $(document).on('click', 'button[data-key]', function(e) {
+            if(!($(this).is(':hover') || e.type === 'mouseover')) {
+                return;
+            }
+            var key = $(this).data('key');
+            handleKeyPress(key);
+        });
+
+        const handleKeyPress = (key) => {
+            key = key.toLowerCase();
+            if (!key.match(/^[a-zA-Z]$/) && key !== 'enter' && key !== 'backspace') {
+                return;
+            }
+            if(key === 'enter') {
+                if(currentValue.length !== 5) {
+                    // --- NEW: Add shake effect for "not enough letters" ---
+                    const currentRow = $('.row-' + row_idx);
+                    currentRow.addClass('shake');
+                    // Remove the class after the animation finishes
+                    setTimeout(() => {
+                        currentRow.removeClass('shake');
+                    }, 600); // Duration should match the CSS animation
+                    return;
+                }
+                // Submit the current guess
+                $('.row-' + row_idx).addClass('submitted disabled');
+
+                const guessToProcess = currentValue;
+
+                $.post('/api/guesses/', { word: guessToProcess }).done(function(data) {
+                    let result = data.result;
+                    const currentRow = $('.row-' + row_idx);
+
+                    // =========================================================
+                    //  MODIFIED: Animate the Tile Flip
+                    // =========================================================
+                    for(let i = 0; i < result.length; i++) {
+                        // Use a setTimeout to create the staggered effect
+                        setTimeout(() => {
+                            const tile = currentRow.find('.col-' + (i + 1));
+                            
+                            // Add the animation class to start the flip
+                            tile.addClass('flip-in');
+
+                            // Determine the result class
+                            let statusClass = '';
+                            if(result[i] === 'G') statusClass = 'correct';
+                            else if(result[i] === 'Y') statusClass = 'present';
+                            else statusClass = 'absent';
+                            
+                            // The color is applied during the animation by CSS,
+                            // but we add the final class for state.
+                            tile.addClass(statusClass);
+
+                        }, i * 350); // Stagger each tile flip by 350ms
+                    }
+
+                    // After the last tile has flipped, check for a win
+                    setTimeout(() => {
+                        // Update the keyboard state (your existing logic)
+                        for(let i = 0; i < result.length; i++) {
+                            const letter = guessToProcess[i].toLowerCase();
+                            if(result[i] === 'G') {
+                                updateKeyboardState(letter, 'correct');
+                            } else if(result[i] === 'Y') {
+                                updateKeyboardState(letter, 'present');
+                            } else {
+                                updateKeyboardState(letter, 'absent');
+                            }
+                        }
+
+                        // Check for a win
+                        const isWin = result === 'GGGGG';
+                        if (isWin) {
+                            for(let i = 0; i < 5; i++) {
+                                setTimeout(() => {
+                                    currentRow.find('.col-' + (i + 1)).addClass('bounce');
+                                }, i * 100); 
+                            }
+                            setTimeout(() => showModal(true, guessToProcess), 1200); 
+                        } else {
+                            row_idx += 1;
+                            col_idx = 1;
+                            currentValue = '';
+                            if(row_idx > 6) {
+                                $.get('/api/games/{{ game_id }}/').done(function(gameData) {
+                                    showModal(false, gameData.key);
+                                });
+                            }
+                        }
+                    }, 5 * 350); // Wait for all flips to finish (5 tiles * 350ms stagger)
+
+                }).fail(function(err) {
+                    const currentRow = $('.row-' + row_idx);
+                    currentRow.addClass('shake invalid');
+                    setTimeout(() => {
+                        currentRow.removeClass('shake invalid');
+                    }, 700); // Animation is 0.6s, so 0.7s is a safe buffer.
+
+                    // 3. Re-enable the row so the user can try again.
+                    currentRow.removeClass('submitted disabled');
+                });
+                return;
+            }
+            if(key === 'backspace') {
+                currentValue = currentValue.slice(0, -1);
+                if(col_idx > 1) {
+                    col_idx -= 1;
+                }
+                $('.row-' + row_idx + ' .col-' + (col_idx)).text('');
+                return;
+            }
+            if(key.length !== 1){
+                return;
+            }
+            key = key.toUpperCase();
+            if(col_idx <= 5) {
+                currentValue += key;
+                $('.row-' + row_idx + ' .col-' + (col_idx)).text(key);
+                col_idx += 1;
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            handleKeyPress(event.key);
+        });
+        const history = {{ game_history|safe }};
+        row_idx = history.length + 1;
+        for(let i=0; i<history.length; i++) {
+            const guess = history[i];
+            const rowIdx = i + 1;
+            const guessValue = guess.word;
+            const result = guess.result;
+            for(let j=0; j<guessValue.length; j++) {
+                const colIdx = j + 1;
+                const letter = guessValue[j];
+                const tile = $('.row-' + rowIdx + ' .col-' + colIdx);
+                tile.text(letter.toUpperCase());
+                if(result[j] === 'G') {
+                    tile.addClass('correct');
+                } else if(result[j] === 'Y') {
+                    tile.addClass('present');
+                } else {
+                    tile.addClass('absent');
+                }
+                const lowerLetter = letter.toLowerCase();
+                if(result[j] === 'G') {
+                    updateKeyboardState(lowerLetter, 'correct');
+                } else if(result[j] === 'Y') {
+                    updateKeyboardState(lowerLetter, 'present');
+                } else {
+                    updateKeyboardState(lowerLetter, 'absent');
+                }
+            }
+        }
+    </script>
+{% endblock %}
+{% block content%}
+<!-- Game Board -->
+<div id="game-board">
+    <!-- Row 1 -->
+    <div class="board-row row-1">
+        <div class="tile col-1"></div>
+        <div class="tile col-2"></div>
+        <div class="tile col-3"></div>
+        <div class="tile col-4"></div>
+        <div class="tile col-5"></div>
+    </div>
+    <!-- Row 2 -->
+    <div class="board-row row-2">
+        <div class="tile col-1"></div>
+        <div class="tile col-2"></div>
+        <div class="tile col-3"></div>
+        <div class="tile col-4"></div>
+        <div class="tile col-5"></div>
+    </div>
+    <!-- Row 3 -->
+    <div class="board-row row-3">
+        <div class="tile col-1"></div>
+        <div class="tile col-2"></div>
+        <div class="tile col-3"></div>
+        <div class="tile col-4"></div>
+        <div class="tile col-5"></div>
+    </div>
+    <!-- Row 4 -->
+    <div class="board-row row-4">
+        <div class="tile col-1"></div>
+        <div class="tile col-2"></div>
+        <div class="tile col-3"></div>
+        <div class="tile col-4"></div>
+        <div class="tile col-5"></div>
+    </div>
+    <!-- Row 5 -->
+    <div class="board-row row-5">
+        <div class="tile col-1"></div>
+        <div class="tile col-2"></div>
+        <div class="tile col-3"></div>
+        <div class="tile col-4"></div>
+        <div class="tile col-5"></div>
+    </div>
+    <!-- Row 6 -->
+    <div class="board-row row-6">
+        <div class="tile col-1"></div>
+        <div class="tile col-2"></div>
+        <div class="tile col-3"></div>
+        <div class="tile col-4"></div>
+        <div class="tile col-5"></div>
+    </div>
+</div>
+
+<!-- On-screen Keyboard -->
+<div id="keyboard">
+    <div class="keyboard-row">
+        <button data-key="q">q</button>
+        <button data-key="w">w</button>
+        <button data-key="e">e</button>
+        <button data-key="r">r</button>
+        <button data-key="t">t</button>
+        <button data-key="y">y</button>
+        <button data-key="u">u</button>
+        <button data-key="i">i</button>
+        <button data-key="o">o</button>
+        <button data-key="p">p</button>
+    </div>
+    <div class="keyboard-row">
+        <button data-key="a">a</button>
+        <button data-key="s">s</button>
+        <button data-key="d">d</button>
+        <button data-key="f">f</button>
+        <button data-key="g">g</button>
+        <button data-key="h">h</button>
+        <button data-key="j">j</button>
+        <button data-key="k">k</button>
+        <button data-key="l">l</button>
+    </div>
+    <div class="keyboard-row">
+        <button data-key="enter" class="large">Enter</button>
+        <button data-key="z">z</button>
+        <button data-key="x">x</button>
+        <button data-key="c">c</button>
+        <button data-key="v">v</button>
+        <button data-key="b">b</button>
+        <button data-key="n">n</button>
+        <button data-key="m">m</button>
+        <button data-key="backspace" class="large"><svg viewBox="0 -0.5 25 25" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M5.91006 12.6651L8.35606 15.5261C8.59533 15.82 8.95209 15.9935 9.33106 16.0001L13.0501 15.9931H16.2391C18.0288 16.0036 19.4885 14.5618 19.5001 12.7721V10.2221C19.4891 8.43193 18.0292 6.98953 16.2391 7.00006L9.33106 7.00706C8.95226 7.01341 8.59552 7.18647 8.35606 7.48006L5.91006 10.3421C5.36331 11.0199 5.36331 11.9872 5.91006 12.6651V12.6651Z" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-darkreader-inline-stroke="" style="--darkreader-inline-stroke: var(--darkreader-text-000000, #e8e6e3);"></path> <path d="M12.1603 9.46359C11.864 9.17409 11.3892 9.17957 11.0997 9.47582C10.8102 9.77207 10.8156 10.2469 11.1119 10.5364L12.1603 9.46359ZM12.6469 12.0364C12.9431 12.3259 13.418 12.3204 13.7075 12.0242C13.997 11.7279 13.9915 11.2531 13.6953 10.9636L12.6469 12.0364ZM13.6963 10.9646C13.4006 10.6745 12.9258 10.6791 12.6357 10.9748C12.3456 11.2705 12.3502 11.7453 12.6458 12.0354L13.6963 10.9646ZM14.1748 13.5354C14.4705 13.8255 14.9454 13.8209 15.2355 13.5252C15.5255 13.2295 15.521 12.7547 15.2253 12.4646L14.1748 13.5354ZM13.6953 12.0364C13.9915 11.7469 13.997 11.2721 13.7075 10.9758C13.418 10.6796 12.9431 10.6741 12.6469 10.9636L13.6953 12.0364ZM11.1119 12.4636C10.8156 12.7531 10.8102 13.2279 11.0997 13.5242C11.3892 13.8204 11.864 13.8259 12.1603 13.5364L11.1119 12.4636ZM12.6458 10.9646C12.3502 11.2547 12.3456 11.7295 12.6357 12.0252C12.9258 12.3209 13.4006 12.3255 13.6963 12.0354L12.6458 10.9646ZM15.2253 10.5354C15.521 10.2453 15.5255 9.77046 15.2355 9.47477C14.9454 9.17909 14.4705 9.17454 14.1748 9.46462L15.2253 10.5354ZM11.1119 10.5364L12.6469 12.0364L13.6953 10.9636L12.1603 9.46359L11.1119 10.5364ZM12.6458 12.0354L14.1748 13.5354L15.2253 12.4646L13.6963 10.9646L12.6458 12.0354ZM12.6469 10.9636L11.1119 12.4636L12.1603 13.5364L13.6953 12.0364L12.6469 10.9636ZM13.6963 12.0354L15.2253 10.5354L14.1748 9.46462L12.6458 10.9646L13.6963 12.0354Z" fill="#ffffff" data-darkreader-inline-fill="" style="--darkreader-inline-fill: var(--darkreader-background-000000, #ffffff);"></path> </g></svg></button>
+    </div>
+</div>
+
+<div id="game-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h2 id="modal-title">You Won!</h2>
+        <p>The solution was: <strong id="modal-solution">SLATE</strong></p>
+        <button id="play-again-button" class="large">Play Again</button>
+    </div>
+</div>
+{% endblock %}
