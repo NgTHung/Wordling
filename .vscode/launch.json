@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "Python Debugger: Django",
             "type": "debugpy",
@@ -14,6 +15,18 @@
             "django": true,
             "autoStartBrowser": false,
             "program": "${workspaceFolder}/manage.py"
+        },
+        {
+            "name": "Python Debugger: migration",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "migrate","api","0004_Populate_words"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/manage.py",
+            "preLaunchTask": "migrate"
         }
     ]
 }

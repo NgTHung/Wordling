@@ -24,8 +24,8 @@ class Word(models.Model):
         return self.value
     
 class Guess(models.Model):
-    game = models.ForeignKey(Game, on_delete=models.PROTECT)
-    value = models.ForeignKey(Word, on_delete=models.PROTECT)
+    game = models.ForeignKey(Game, on_delete=models.CASCADE)
+    value = models.ForeignKey(Word, on_delete=models.CASCADE)
     is_correct = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

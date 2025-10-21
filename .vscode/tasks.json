@@ -1,0 +1,11 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "migrate",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python ${workspaceFolder}/manage.py migrate --fake api 0003_word_game_status",
+            "problemMatcher": []
+        }
+    ]
+}

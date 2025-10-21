@@ -25,6 +25,12 @@ Check out Wordling in action:
   - Color-coded letter feedback (Green = correct position, Yellow = wrong position, Gray = not in word)
   - Support for duplicate letter handling
 
+- **Highly Configurable**
+  - All game rules configurable via environment variables
+  - Customize word length, max guesses, animation timings, and UI dimensions
+  - No code changes needed - just update `.env` file
+  - Perfect for creating different difficulty modes
+
 - **User Account System**
   - Complete registration and authentication flow
   - Persistent game statistics tracking
@@ -97,27 +103,178 @@ Before you begin, ensure you have the following installed:
    pip install -r requirements.txt
    ```
 
-4. **Apply database migrations:**
+4. **Configure environment variables:**
+   
+   Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Then edit `.env` with your preferred settings. See the [Environment Configuration](#environment-configuration) section below for details.
+
+5. **Apply database migrations:**
    
    This will create the database schema and automatically load the word list from `words_alpha.txt`:
    ```bash
    python manage.py migrate
    ```
 
-5. **Create a superuser (optional, for admin access):**
+6. **Create a superuser (optional, for admin access):**
    ```bash
    python manage.py createsuperuser
    ```
 
-6. **Run the development server:**
+7. **Run the development server:**
    ```bash
    python manage.py runserver
    ```
 
-7. **Access the application:**
+8. **Access the application:**
    - **Web Interface:** [http://localhost:8000/](http://localhost:8000/)
    - **API Root:** [http://localhost:8000/api/](http://localhost:8000/api/)
    - **Admin Panel:** [http://localhost:8000/admin/](http://localhost:8000/admin/) (requires superuser)
+
+---
+
+## Environment Configuration
+
+Wordling uses environment variables to configure both Django settings and game parameters. This makes it easy to customize the game without modifying code.
+
+### Setup
+
+1. **Copy the example file:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Generate a secure secret key** (for production):
+   ```bash
+   python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
+   ```
+
+3. **Edit `.env`** with your preferred values.
+
+### Configuration Options
+
+#### Django Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SECRET_KEY` | (required) | Django secret key - **MUST be changed for production** |
+| `DEBUG` | `True` | Enable debug mode - **MUST be False in production** |
+
+#### Game Rules
+
+Customize core gameplay mechanics:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GAME_WORD_LENGTH` | `5` | Number of letters in each word |
+| `GAME_MAX_GUESSES` | `6` | Maximum number of guesses allowed |
+
+**Example:** Create a harder mode with 6-letter words and only 5 guesses:
+```bash
+GAME_WORD_LENGTH=6
+GAME_MAX_GUESSES=5
+```
+
+> **⚠️ Important:** When changing `GAME_WORD_LENGTH`, you must repopulate the word database:
+> ```bash
+> python manage.py migrate --fake api 0003_word_game_status
+> python manage.py migrate
+> ```
+> This ensures only words of the correct length are loaded into the database.
+
+#### Animation Timings (milliseconds)
+
+Fine-tune the user experience by adjusting animation speeds:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ANIMATION_SHAKE_MS` | `600` | Duration of the "not enough letters" shake |
+| `ANIMATION_TILE_FLIP_STAGGER_MS` | `350` | Delay between each tile flip |
+| `ANIMATION_BOUNCE_STAGGER_MS` | `100` | Delay between each bounce on win |
+| `ANIMATION_WIN_MODAL_DELAY_MS` | `1200` | Delay before showing the win modal |
+| `ANIMATION_MODAL_DELAY_MS` | `200` | Delay before modal animates in |
+| `ANIMATION_TOAST_TIMEOUT_MS` | `7000` | Auto-hide timeout for toast notifications |
+
+**Example:** Faster animations for a snappier experience:
+```bash
+ANIMATION_TILE_FLIP_STAGGER_MS=200
+ANIMATION_BOUNCE_STAGGER_MS=50
+ANIMATION_WIN_MODAL_DELAY_MS=800
+```
+
+#### UI Dimensions
+
+Control visual layout:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `UI_TILE_GAP_PX` | `5` | Gap between tiles in pixels |
+| `UI_BOARD_MAX_WIDTH_PX` | `350` | Maximum width of the game board |
+| `UI_BOARD_COLUMNS` | `5` | Number of columns (should match `GAME_WORD_LENGTH`) |
+
+#### Pagination
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LEADERBOARD_PAGE_SIZE` | `50` | Number of players shown per leaderboard page |
+
+### Example `.env` File
+
+```bash
+# Django Configuration
+SECRET_KEY='your-super-secret-key-here'
+DEBUG=True
+
+# Game Rules
+GAME_WORD_LENGTH=5
+GAME_MAX_GUESSES=6
+
+# Animation Timings (milliseconds)
+ANIMATION_SHAKE_MS=600
+ANIMATION_TILE_FLIP_STAGGER_MS=350
+ANIMATION_BOUNCE_STAGGER_MS=100
+ANIMATION_WIN_MODAL_DELAY_MS=1200
+ANIMATION_MODAL_DELAY_MS=200
+ANIMATION_TOAST_TIMEOUT_MS=7000
+
+# UI Dimensions
+UI_TILE_GAP_PX=5
+UI_BOARD_MAX_WIDTH_PX=350
+UI_BOARD_COLUMNS=5
+
+# Pagination
+LEADERBOARD_PAGE_SIZE=50
+```
+
+### Testing Different Configurations
+
+You can easily test different game modes without changing code:
+
+**Easy Mode (4 letters, 7 guesses):**
+```bash
+GAME_WORD_LENGTH=4
+GAME_MAX_GUESSES=7
+```
+
+**Hard Mode (6 letters, 5 guesses):**
+```bash
+GAME_WORD_LENGTH=6
+GAME_MAX_GUESSES=5
+```
+
+**Important:** After changing `GAME_WORD_LENGTH`, you must repopulate the word database:
+```bash
+python manage.py migrate --fake api 0003_word_game_status
+python manage.py migrate
+```
+
+Then restart the development server:
+```bash
+python manage.py runserver
+```
 
 ---
 
@@ -183,6 +340,7 @@ Wordling/
 │   ├── views.py              # API view classes
 │   ├── urls.py               # API URL routing
 │   ├── utils.py              # Helper functions (color_word logic)
+│   ├── constants.py          # Game constants loaded from .env
 │   └── words_alpha.txt       # Word list source file
 │
 ├── wordle/                   # Main web application
@@ -209,9 +367,12 @@ Wordling/
 │
 ├── Wordling/                 # Django project settings
 │   ├── settings.py           # Main configuration file
+│   ├── context_processors.py # Makes constants available in templates
 │   ├── urls.py               # Root URL configuration
 │   └── wsgi.py               # WSGI application entry point
 │
+├── .env                      # Environment variables (create from .env.example)
+├── .env.example              # Example environment configuration
 ├── manage.py                 # Django management script
 ├── requirements.txt          # Python dependencies
 ├── pyproject.toml            # Project metadata
@@ -241,11 +402,27 @@ Wordling/
 **Issue:** `ImportError: No module named 'rest_framework'`
 - **Solution:** Make sure you've activated your virtual environment and run `pip install -r requirements.txt`
 
+**Issue:** `ImproperlyConfigured: Set the SECRET_KEY environment variable`
+- **Solution:** Create a `.env` file by copying `.env.example` and ensure it contains a `SECRET_KEY` value
+
+**Issue:** Environment variables not being loaded
+- **Solution:** 
+  - Verify `.env` file exists in the project root (same directory as `manage.py`)
+  - Check `.env` file format - no quotes around values unless they contain spaces
+  - Restart the development server after changing `.env`
+
 **Issue:** Database migration errors
 - **Solution:** Delete `db.sqlite3` and rerun `python manage.py migrate`
 
 **Issue:** Words not loading
 - **Solution:** Ensure `api/words_alpha.txt` exists and run the migration `0004_Populate_words.py`
+
+**Issue:** Changed `GAME_WORD_LENGTH` but wrong word lengths appear
+- **Solution:** Rerun the word population migration to reload words with the correct length:
+  ```bash
+  python manage.py migrate --fake api 0003_word_game_status
+  python manage.py migrate
+  ```
 
 **Issue:** CSRF verification failed
 - **Solution:** Ensure cookies are enabled and you're using the same domain for API calls
