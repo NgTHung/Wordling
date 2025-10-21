@@ -19,6 +19,12 @@
 
     --animation-duration-flip: 0.6s;
     --animation-duration-bounce: 1s;
+
+    /* Game Board Dimensions (from environment variables) */
+    --board-columns: 5;
+    --board-rows: 6;
+    --tile-gap: 5px;
+    --board-max-width: 350px;
 }
 
 
@@ -74,18 +80,18 @@ header h1 {
 /* --- MAIN GAME BOARD --- */
 #game-board {
     display: grid;
-    grid-template-rows: repeat(6, 1fr);
-    gap: 5px;
+    grid-template-rows: repeat(var(--board-rows), 1fr);
+    gap: var(--tile-gap);
     margin-bottom: 2rem;
     width: 100%;
-    max-width: 350px;
+    max-width: var(--board-max-width);
     /* Constrain the board width */
 }
 
 .board-row {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 5px;
+    grid-template-columns: repeat(var(--board-columns), 1fr);
+    gap: var(--tile-gap);
 }
 
 .tile {

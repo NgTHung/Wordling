@@ -5,6 +5,7 @@ from django.db.models import Max
 from accounts.models import UserProfile
 from api.models import Game, Guess, Word
 from api.utils import color_word
+from api.constants import LEADERBOARD_PAGE_SIZE
 
 import random
 # Create your views here.
@@ -74,8 +75,8 @@ class LeaderboardView(ListView):
     template_name = 'leaderboard.html'
     context_object_name = 'profiles'
     
-    # Show top 50 players, for example
-    paginate_by = 50
+    # Show top LEADERBOARD_PAGE_SIZE players
+    paginate_by = LEADERBOARD_PAGE_SIZE
 
     def get_queryset(self):
         """

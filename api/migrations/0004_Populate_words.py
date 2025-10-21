@@ -2,16 +2,21 @@
 
 from django.db import migrations
 import os
+import environ
 
-word_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../words_alpha.txt'))
+from Wordling.settings import BASE_DIR
+
+word_file_path = os.path.join(BASE_DIR, 'api', 'words_alpha.txt')
 def populate_words(apps, schema_editor):
+    env = environ.Env()
+    environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
     Word = apps.get_model('api', 'Word')
     Word.objects.all().delete()
     WordArray = []
     with open(word_file_path, 'r') as f:
         words = f.read().splitlines()
         for word in words:
-            if(len(word) == 5):
+            if(len(word) == env('WORD_LENGTH')):
                 WordArray.append(Word(value=word.upper()))
     Word.objects.bulk_create(WordArray)
 
@@ -23,6 +28,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(populate_words),
         migrations.RunSQL("UPDATE sqlite_sequence SET seq = 0 WHERE sqlite_sequence.name = 'api_word';"),
+        migrations.RunPython(populate_words),
     ]

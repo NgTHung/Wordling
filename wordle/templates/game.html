@@ -2,6 +2,39 @@
 {% load static %}
 {% block extra_js %}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <!-- Load game constants from Django context -->
+    <script>
+        // Game Rules
+        const WORD_LENGTH = {{ WORD_LENGTH }};
+        const MAX_GUESSES = {{ MAX_GUESSES }};
+
+        // Animation Timings (milliseconds)
+        const ANIMATION_SHAKE_MS = {{ ANIMATION_SHAKE_MS }};
+        const ANIMATION_TILE_FLIP_STAGGER_MS = {{ ANIMATION_TILE_FLIP_STAGGER_MS }};
+        const ANIMATION_BOUNCE_STAGGER_MS = {{ ANIMATION_BOUNCE_STAGGER_MS }};
+        const ANIMATION_WIN_MODAL_DELAY_MS = {{ ANIMATION_WIN_MODAL_DELAY_MS }};
+        const ANIMATION_MODAL_DELAY_MS = {{ ANIMATION_MODAL_DELAY_MS }};
+        const ANIMATION_TOAST_TIMEOUT_MS = {{ ANIMATION_TOAST_TIMEOUT_MS }};
+
+        // UI Dimensions
+        const UI_TILE_GAP_PX = {{ UI_TILE_GAP_PX }};
+        const UI_BOARD_MAX_WIDTH_PX = {{ UI_BOARD_MAX_WIDTH_PX }};
+        const UI_BOARD_COLUMNS = {{ UI_BOARD_COLUMNS }};
+
+        // Color codes
+        const COLOR_CORRECT = 'G';
+        const COLOR_PRESENT = 'Y';
+        const COLOR_ABSENT = 'B';
+
+        // Win condition
+        const WIN_CONDITION = 'G'.repeat(WORD_LENGTH);
+
+        // Set CSS variables for dynamic board sizing
+        document.documentElement.style.setProperty('--board-columns', UI_BOARD_COLUMNS);
+        document.documentElement.style.setProperty('--board-rows', MAX_GUESSES);
+        document.documentElement.style.setProperty('--tile-gap', UI_TILE_GAP_PX + 'px');
+        document.documentElement.style.setProperty('--board-max-width', UI_BOARD_MAX_WIDTH_PX + 'px');
+    </script>
     <script>
         let toastTimeout;
         function showConfirmationToast() {
@@ -9,10 +42,10 @@
             clearTimeout(toastTimeout);
             $('#confirmation-toast').addClass('visible');
 
-            // Automatically hide the toast after 7 seconds if no action is taken
+            // Automatically hide the toast after ANIMATION_TOAST_TIMEOUT_MS if no action is taken
             toastTimeout = setTimeout(() => {
                 hideConfirmationToast();
-            }, 7000);
+            }, ANIMATION_TOAST_TIMEOUT_MS);
         }
         function hideConfirmationToast() {
             // Clear the timer so it doesn't try to hide an already hidden toast
@@ -36,7 +69,7 @@
             // Use a small delay to ensure the DOM is updated before the animation
             setTimeout(() => {
                 modal.addClass('visible');
-            }, 200);
+            }, ANIMATION_MODAL_DELAY_MS);
         }
 
         $('#give-up-button').on('click', function() {
@@ -96,14 +129,14 @@
                 return;
             }
             if(key === 'enter') {
-                if(currentValue.length !== 5) {
-                    // --- NEW: Add shake effect for "not enough letters" ---
+                if(currentValue.length !== WORD_LENGTH) {
+                    // Add shake effect for "not enough letters"
                     const currentRow = $('.row-' + row_idx);
                     currentRow.addClass('shake');
                     // Remove the class after the animation finishes
                     setTimeout(() => {
                         currentRow.removeClass('shake');
-                    }, 600); // Duration should match the CSS animation
+                    }, ANIMATION_SHAKE_MS);
                     return;
                 }
                 // Submit the current guess
@@ -115,9 +148,7 @@
                     let result = data.result;
                     const currentRow = $('.row-' + row_idx);
 
-                    // =========================================================
-                    //  MODIFIED: Animate the Tile Flip
-                    // =========================================================
+                    // Animate the Tile Flip with staggered effect
                     for(let i = 0; i < result.length; i++) {
                         // Use a setTimeout to create the staggered effect
                         setTimeout(() => {
@@ -128,25 +159,25 @@
 
                             // Determine the result class
                             let statusClass = '';
-                            if(result[i] === 'G') statusClass = 'correct';
-                            else if(result[i] === 'Y') statusClass = 'present';
+                            if(result[i] === COLOR_CORRECT) statusClass = 'correct';
+                            else if(result[i] === COLOR_PRESENT) statusClass = 'present';
                             else statusClass = 'absent';
                             
                             // The color is applied during the animation by CSS,
                             // but we add the final class for state.
                             tile.addClass(statusClass);
 
-                        }, i * 350); // Stagger each tile flip by 350ms
+                        }, i * ANIMATION_TILE_FLIP_STAGGER_MS); // Stagger each tile flip
                     }
 
                     // After the last tile has flipped, check for a win
                     setTimeout(() => {
-                        // Update the keyboard state (your existing logic)
+                        // Update the keyboard state
                         for(let i = 0; i < result.length; i++) {
                             const letter = guessToProcess[i].toLowerCase();
-                            if(result[i] === 'G') {
+                            if(result[i] === COLOR_CORRECT) {
                                 updateKeyboardState(letter, 'correct');
-                            } else if(result[i] === 'Y') {
+                            } else if(result[i] === COLOR_PRESENT) {
                                 updateKeyboardState(letter, 'present');
                             } else {
                                 updateKeyboardState(letter, 'absent');
@@ -154,19 +185,19 @@
                         }
 
                         // Check for a win
-                        const isWin = result === 'GGGGG';
+                        const isWin = result === WIN_CONDITION;
                         if (isWin) {
-                            for(let i = 0; i < 5; i++) {
+                            for(let i = 0; i < WORD_LENGTH; i++) {
                                 setTimeout(() => {
                                     currentRow.find('.col-' + (i + 1)).addClass('bounce');
-                                }, i * 100); 
+                                }, i * ANIMATION_BOUNCE_STAGGER_MS); 
                             }
-                            setTimeout(() => showModal(true, guessToProcess), 1200); 
+                            setTimeout(() => showModal(true, guessToProcess), ANIMATION_WIN_MODAL_DELAY_MS); 
                         } else {
                             row_idx += 1;
                             col_idx = 1;
                             currentValue = '';
-                            if(row_idx > 6) {
+                            if(row_idx > MAX_GUESSES) {
                                 $.get('/api/games/{{ game_id }}/').done(function(gameData) {
                                     showModal(false, gameData.key);
                                 });
@@ -240,56 +271,16 @@
     </script>
 {% endblock %}
 {% block content%}
-<!-- Game Board -->
+<!-- Game Board - Dynamically generated based on MAX_GUESSES and WORD_LENGTH -->
 <div id="game-board">
-    <!-- Row 1 -->
-    <div class="board-row row-1">
-        <div class="tile col-1"></div>
-        <div class="tile col-2"></div>
-        <div class="tile col-3"></div>
-        <div class="tile col-4"></div>
-        <div class="tile col-5"></div>
+    {% for row in MAX_GUESSES_RANGE %}
+    <!-- Row {{ row }} -->
+    <div class="board-row row-{{ row }}">
+        {% for col in WORD_LENGTH_RANGE %}
+        <div class="tile col-{{ col }}"></div>
+        {% endfor %}
     </div>
-    <!-- Row 2 -->
-    <div class="board-row row-2">
-        <div class="tile col-1"></div>
-        <div class="tile col-2"></div>
-        <div class="tile col-3"></div>
-        <div class="tile col-4"></div>
-        <div class="tile col-5"></div>
-    </div>
-    <!-- Row 3 -->
-    <div class="board-row row-3">
-        <div class="tile col-1"></div>
-        <div class="tile col-2"></div>
-        <div class="tile col-3"></div>
-        <div class="tile col-4"></div>
-        <div class="tile col-5"></div>
-    </div>
-    <!-- Row 4 -->
-    <div class="board-row row-4">
-        <div class="tile col-1"></div>
-        <div class="tile col-2"></div>
-        <div class="tile col-3"></div>
-        <div class="tile col-4"></div>
-        <div class="tile col-5"></div>
-    </div>
-    <!-- Row 5 -->
-    <div class="board-row row-5">
-        <div class="tile col-1"></div>
-        <div class="tile col-2"></div>
-        <div class="tile col-3"></div>
-        <div class="tile col-4"></div>
-        <div class="tile col-5"></div>
-    </div>
-    <!-- Row 6 -->
-    <div class="board-row row-6">
-        <div class="tile col-1"></div>
-        <div class="tile col-2"></div>
-        <div class="tile col-3"></div>
-        <div class="tile col-4"></div>
-        <div class="tile col-5"></div>
-    </div>
+    {% endfor %}
 </div>
 
 <!-- On-screen Keyboard -->

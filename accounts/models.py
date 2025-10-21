@@ -2,9 +2,11 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from api.constants import MAX_GUESSES, WIN_PERCENTAGE_MULTIPLIER
 
 def get_default_guess_distribution():
-    return [0, 0, 0, 0, 0, 0]
+    """Create default guess distribution array with MAX_GUESSES slots."""
+    return [0] * MAX_GUESSES
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -23,7 +25,7 @@ class UserProfile(models.Model):
     def win_percentage(self):
         if self.games_played == 0:
             return 0
-        return round((self.games_won / self.games_played) * 100)
+        return round((self.games_won / self.games_played) * WIN_PERCENTAGE_MULTIPLIER)
     @property
     def games_played(self):
         return sum(self.guess_distribution)

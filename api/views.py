@@ -9,6 +9,7 @@ from rest_framework.reverse import reverse
 from api.utils import color_word
 from rest_framework import authentication
 from django.http import HttpRequest
+from api.constants import WORD_LENGTH, MAX_GUESSES
 
 class SubSessionAuthentication(authentication.SessionAuthentication):
     def authenticate(self, request: HttpRequest):
@@ -79,7 +80,7 @@ class GuessList(generics.ListCreateAPIView):
                     if profile.current_streak > profile.max_streak:
                         profile.max_streak = profile.current_streak
                     profile.guess_distribution[guess_count] += 1
-                elif guess_count + 1 >= 6:
+                elif guess_count + 1 >= MAX_GUESSES:
                     profile.current_streak = 0
                 profile.save()
             serializer.save(game=game, value=word, is_correct=(word_value == game.key))
@@ -87,7 +88,7 @@ class GuessList(generics.ListCreateAPIView):
             if word_value == game.key:
                 game.status = Game.GameStatus.WON
                 game.save()
-            elif guess_count >= 5:
+            elif guess_count >= MAX_GUESSES - 1:
                 game.status = Game.GameStatus.LOST
                 game.save()
             return Response({'result': ret}, status=201)
