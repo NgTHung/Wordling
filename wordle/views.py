@@ -85,6 +85,5 @@ class LeaderboardView(ListView):
         """
         return UserProfile.objects.order_by(
             '-max_streak', 
-            '-games_won', 
-            'games_played' # Fewer games played is a good tie-breaker
+            '-games_won'
         )

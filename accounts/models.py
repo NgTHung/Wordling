@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from api.constants import MAX_GUESSES, WIN_PERCENTAGE_MULTIPLIER
+from api.models import Game
 
 def get_default_guess_distribution():
     """Create default guess distribution array with MAX_GUESSES slots."""
@@ -28,7 +29,7 @@ class UserProfile(models.Model):
         return round((self.games_won / self.games_played) * WIN_PERCENTAGE_MULTIPLIER)
     @property
     def games_played(self):
-        return sum(self.guess_distribution)
+        return Game.objects.filter(user=self.user).count()
 
 # This is a Django Signal. It ensures that whenever a new User is created,
 # a corresponding UserProfile is automatically created with it.
