@@ -53,7 +53,7 @@ class CustomLoginView(LoggedOutOnlyMixin, auth_views.LoginView):
         Adds extra context to the template.
         """
         context = super().get_context_data(**kwargs)
-        context['page_title'] = "Login to Wordle" # Example of extra context
+        context['page_title'] = "Login to Quadhexle" # Example of extra context
         return context
 
 # ----------------------------------------------

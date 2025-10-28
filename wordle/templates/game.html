@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/game.css' %}">
+{% endblock %}
 {% block extra_js %}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <!-- Load game constants from Django context -->
@@ -7,6 +10,7 @@
         // Game Rules
         const WORD_LENGTH = {{ WORD_LENGTH }};
         const MAX_GUESSES = {{ MAX_GUESSES }};
+        const NUM_COLORS = 4; // Always 4 hex colors to guess
 
         // Animation Timings (milliseconds)
         const ANIMATION_SHAKE_MS = {{ ANIMATION_SHAKE_MS }};
@@ -28,6 +32,13 @@
 
         // Win condition
         const WIN_CONDITION = 'G'.repeat(WORD_LENGTH);
+        
+        // Store the actual color palette
+        {% if pallet_colors %}
+        const PALLET_COLORS = {{ pallet_colors|safe }};
+        {% else %}
+        const PALLET_COLORS = ['000000', '000000', '000000', '000000'];
+        {% endif %}
 
         // Set CSS variables for dynamic board sizing
         document.documentElement.style.setProperty('--board-columns', UI_BOARD_COLUMNS);
@@ -53,12 +64,115 @@
             $('#confirmation-toast').removeClass('visible');
         }
 
+        function revealColors() {
+            // Reveal all 4 hex colors from the pallet
+            {% if pallet_colors %}
+            const colors = {{ pallet_colors|safe }};
+            for(let i = 0; i < 4; i++) {
+                const colorBox = $('#color-display .color-box[data-color="' + (i + 1) + '"]');
+                const hexColor = colors[i].toUpperCase();
+                colorBox.find('.color-swatch').css('background', '#' + hexColor).addClass('lit');
+                colorBox.find('.color-label').html('#' + hexColor.split('').map(c => '<span class="lit-char">' + c + '</span>').join(''));
+            }
+            {% endif %}
+        }
+        
+        // Helper function to get color for quadrant based on status
+        function getQuadrantColor(colorIdx, status) {
+            const hexColor = PALLET_COLORS[colorIdx];
+            
+            if (status === 'correct') {
+                // Full color
+                return '#' + hexColor;
+            } else if (status === 'present') {
+                // Dimmed version (40% opacity)
+                return 'rgba(' + parseInt(hexColor.substr(0,2), 16) + ',' + 
+                       parseInt(hexColor.substr(2,2), 16) + ',' + 
+                       parseInt(hexColor.substr(4,2), 16) + ', 0.4)';
+            } else {
+                // Black/default
+                return null;
+            }
+        }
+        
+        // Update color display progressively
+        function updateColorDisplay(colorIdx, displayHex, hasCorrect) {
+            const colorBox = $('#color-display .color-box[data-color="' + (colorIdx + 1) + '"]');
+            const hexString = PALLET_COLORS[colorIdx];
+            
+            // Get current display text (without HTML)
+            const currentLabel = colorBox.find('.color-label').html() || '#??????';
+            const currentHex = currentLabel.replace(/<[^>]*>/g, '').substring(1); // Remove # and HTML tags
+            console.log('Current Hex:', currentHex, 'Display Hex:', displayHex);
+            // Merge: keep existing chars, only replace ? with new chars
+            let mergedHex = '';
+            for(let i = 0; i < 6; i++) {
+                if(currentHex[i] && currentHex[i] !== '?') {
+                    // Keep existing revealed character
+                    mergedHex += currentHex[i];
+                } else if(displayHex[i] && displayHex[i] !== '?') {
+                    // Use new revealed character
+                    mergedHex += displayHex[i];
+                } else {
+                    // Still unknown
+                    mergedHex += '?';
+                }
+            }
+            console.log('Merged Hex:', mergedHex);
+            
+            // Build HTML with lit/unlit characters
+            let labelHtml = '#';
+            for(let i = 0; i < 6; i++) {
+                const char = mergedHex[i];
+                if(char !== '?') {
+                    labelHtml += '<span class="lit-char">' + char + '</span>';
+                } else {
+                    labelHtml += '?';
+                }
+            }
+            colorBox.find('.color-label').html(labelHtml);
+            
+            // Calculate how many characters are revealed (0-6)
+            const revealedCount = mergedHex.split('').filter(c => c !== '?').length;
+            const swatch = colorBox.find('.color-swatch');
+            
+            if(revealedCount === 0) {
+                // No characters revealed - keep dimmed background
+                swatch.css('background', 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)');
+                swatch.removeClass('lit');
+            } else if(revealedCount === 6) {
+                // All characters revealed - show full color
+                swatch.css('background', '#' + mergedHex).addClass('lit');
+            } else {
+                // Partial reveal - transition from black to color
+                // Calculate opacity based on revealed characters (0% to 100%)
+                const opacity = revealedCount / 6;
+                const lookup = {1: '19', 2: '33', 3: '4D', 4: '66', 5: '80', 6: 'FF'};
+                
+                // Create a gradient that transitions from dark to the actual color
+                const fullColor = hexString;
+                swatch.css('background', '#' + fullColor + lookup[revealedCount]);
+                swatch.addClass('lit');
+            }
+        }
+
         function showModal(isWin, solution) {
             const modal = $('#game-modal');
             const title = $('#modal-title');
-            const solutionText = $('#modal-solution');
             console.log('Showing modal with solution:', solution);
-            solutionText.text(solution.toUpperCase());
+            
+            // Reveal the colors in the display
+            revealColors();
+            
+            // Parse solution and display colors in modal
+            for (let i = 0; i < 4 && i < solution.length; i++) {
+                const hexColor = solution[i].replace('#', '').toUpperCase();
+                const swatch = $('#modal-colors .modal-color-swatch[data-color="' + (i + 1) + '"]');
+                const label = $('#modal-colors .modal-color-label[data-color="' + (i + 1) + '"]');
+                
+                swatch.css('background', '#' + hexColor);
+                label.text('#' + hexColor);
+            }
 
             if (isWin) {
                 title.text('You Won!');
@@ -80,7 +194,7 @@
             hideConfirmationToast();
             
             $.get('/api/giveup/').then(function(data) {
-                showModal(false, data.key);
+                showModal(false, data.colors);
             });
         });
         $('#toast-cancel-give-up').on('click', function() {
@@ -96,23 +210,237 @@
                 window.location.reload();
             });
         });
+
+        // Blend toggle functionality
+        let isBlendMode = false;
+        
+        function blendColors(color1, color2, color3, color4) {
+            // Parse hex colors to RGB
+            const parseHex = (hex) => {
+                hex = hex.replace('#', '');
+                return {
+                    r: parseInt(hex.substr(0, 2), 16),
+                    g: parseInt(hex.substr(2, 2), 16),
+                    b: parseInt(hex.substr(4, 2), 16)
+                };
+            };
+            
+            const c1 = parseHex(color1);
+            const c2 = parseHex(color2);
+            const c3 = parseHex(color3);
+            const c4 = parseHex(color4);
+            
+            // Average the RGB values and dim them (multiply by 0.4 for 40% brightness)
+            const dimFactor = 0.6;
+            const avgR = Math.round(((c1.r + c2.r + c3.r + c4.r) / 4) * dimFactor);
+            const avgG = Math.round(((c1.g + c2.g + c3.g + c4.g) / 4) * dimFactor);
+            const avgB = Math.round(((c1.b + c2.b + c3.b + c4.b) / 4) * dimFactor);
+            
+            // Convert back to hex
+            const toHex = (n) => n.toString(16).padStart(2, '0');
+            return '#' + toHex(avgR) + toHex(avgG) + toHex(avgB);
+        }
+        
+        function getColorStatus(colorIdx, quadElement) {
+            // Check the quad's classes to determine status
+            if (quadElement.hasClass('correct')) {
+                return 'Correct';
+            } else if (quadElement.hasClass('present')) {
+                return 'Appear in answer';
+            } else if (quadElement.hasClass('absent')) {
+                return 'Wrong';
+            }
+            return 'Not guessed';
+        }
+        
+        function toggleBlendMode() {
+            isBlendMode = !isBlendMode;
+            $('#blend-toggle-button').toggleClass('active', isBlendMode);
+            
+            if (isBlendMode) {
+                // Apply blended colors to tiles and keyboard
+                $('.tile, button[data-key]').each(function() {
+                    const quads = $(this).find('.quad');
+                    if (quads.length === 4) {
+                        // Get colors and statuses from each quadrant
+                        const colors = [];
+                        const statuses = [];
+                        let hasAnyColor = false;
+                        
+                        quads.each(function(idx) {
+                            const quad = $(this);
+                            const bgColor = quad.css('background-color');
+                            const status = getColorStatus(idx, quad);
+                            
+                            statuses.push(status);
+                            
+                            // Convert rgba/rgb to hex or use black for unguessed
+                            if (bgColor && bgColor !== 'rgba(255, 255, 255, 0.1)' && bgColor !== 'transparent' && 
+                                (quad.hasClass('correct') || quad.hasClass('present'))) {
+                                // Extract RGB values
+                                const matches = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                                if (matches) {
+                                    const r = parseInt(matches[1]).toString(16).padStart(2, '0');
+                                    const g = parseInt(matches[2]).toString(16).padStart(2, '0');
+                                    const b = parseInt(matches[3]).toString(16).padStart(2, '0');
+                                    colors.push('#' + r + g + b);
+                                    hasAnyColor = true;
+                                } else {
+                                    colors.push('#ffffff1a');
+                                }
+                            } else {
+                                colors.push('#ffffff1a');
+                            }
+                        });
+                        
+                        // Only blend if there's at least one color, otherwise keep black
+                        let blendedColor = '#ffffff1a';
+                        if (hasAnyColor) {
+                            blendedColor = blendColors(colors[0], colors[1], colors[2], colors[3]);
+                        }
+                        
+                        // Hide quadrants and set blended background
+                        quads.hide();
+                        $(this).css('background-color', blendedColor);
+                        
+                        // Store tooltip data
+                        $(this).data('tooltip-statuses', statuses);
+                    }
+                });
+                
+                // Setup custom tooltip handlers
+                setupCustomTooltip();
+            } else {
+                // Restore original quadrant display
+                $('.tile, button[data-key]').each(function() {
+                    const quads = $(this).find('.quad');
+                    if (quads.length === 4) {
+                        quads.show();
+                        $(this).css('background-color', '');
+                        $(this).removeData('tooltip-statuses');
+                    }
+                });
+                
+                // Remove tooltip handlers
+                $('.tile, button[data-key]').off('mouseenter.customtooltip mouseleave.customtooltip mousemove.customtooltip');
+            }
+        }
+        
+        function setupCustomTooltip() {
+            const tooltip = $('#custom-tooltip');
+            const tooltipContent = $('.tooltip-content');
+            
+            $('.tile, button[data-key]').on('mouseenter.customtooltip', function(e) {
+                const statuses = $(this).data('tooltip-statuses');
+                if (statuses && statuses.length === 4) {
+                    // Build tooltip HTML with color-coded statuses
+                    let html = '';
+                    for (let i = 0; i < 4; i++) {
+                        const status = statuses[i];
+                        let statusClass = 'status-none';
+                        if (status === 'Correct') {
+                            statusClass = 'status-correct';
+                        } else if (status === 'Appear in answer') {
+                            statusClass = 'status-present';
+                        } else if (status === 'Wrong') {
+                            statusClass = 'status-wrong';
+                        }
+                        html += '<span class="tooltip-line">Color ' + (i + 1) + ': <span class="' + statusClass + '">' + status + '</span></span>';
+                    }
+                    
+                    tooltipContent.html(html);
+                    
+                    // Position tooltip immediately before showing
+                    const offset = 15;
+                    let left = e.clientX + offset;
+                    let top = e.clientY + offset;
+                    
+                    // Show tooltip briefly to get dimensions
+                    tooltip.css({
+                        left: left + 'px',
+                        top: top + 'px',
+                        visibility: 'hidden',
+                        display: 'block'
+                    });
+                    
+                    const tooltipWidth = tooltip.outerWidth();
+                    const tooltipHeight = tooltip.outerHeight();
+                    
+                    // Adjust if tooltip goes off screen
+                    if (left + tooltipWidth > window.innerWidth) {
+                        left = e.clientX - tooltipWidth - offset;
+                    }
+                    if (top + tooltipHeight > window.innerHeight) {
+                        top = e.clientY - tooltipHeight - offset;
+                    }
+                    
+                    // Position and show
+                    tooltip.css({
+                        left: left + 'px',
+                        top: top + 'px',
+                        visibility: 'visible'
+                    });
+                    
+                    tooltip.addClass('visible');
+                }
+            }).on('mousemove.customtooltip', function(e) {
+                // Update position as mouse moves
+                const offset = 15;
+                const tooltipWidth = tooltip.outerWidth() || 0;
+                const tooltipHeight = tooltip.outerHeight() || 0;
+                
+                let left = e.clientX + offset;
+                let top = e.clientY + offset;
+                
+                // Keep tooltip on screen
+                if (left + tooltipWidth > window.innerWidth) {
+                    left = e.clientX - tooltipWidth - offset;
+                }
+                if (top + tooltipHeight > window.innerHeight) {
+                    top = e.clientY - tooltipHeight - offset;
+                }
+                
+                tooltip.css({
+                    left: left + 'px',
+                    top: top + 'px'
+                });
+            }).on('mouseleave.customtooltip', function() {
+                tooltip.removeClass('visible').css('display', '');
+            });
+        }
+        
+        $('#blend-toggle-button').on('click', toggleBlendMode);
+
         keyboardState = {}
         var currentValue = '';
         var row_idx = 1;
         var col_idx = 1;
 
-        const updateKeyboardState = (key, status) => {
-            const prevStatus = keyboardState[key];
+        const updateKeyboardState = (key, colorIdx, status) => {
+            // Initialize state for this key if it doesn't exist
+            if (!keyboardState[key]) {
+                keyboardState[key] = ['', '', '', ''];
+            }
+            
+            const prevStatus = keyboardState[key][colorIdx];
             if(prevStatus === 'correct') {
                 return;
             }
             if(prevStatus === 'present' && status === 'absent') {
                 return;
             }
-            keyboardState[key] = status;
+            
+            keyboardState[key][colorIdx] = status;
             const button = $('button[data-key="' + key.toLowerCase() + '"]');
-            button.removeClass('correct present absent');
-            button.addClass(status);
+            const quad = button.find('.quad-' + (colorIdx + 1));
+            quad.removeClass('correct present absent');
+            quad.addClass(status);
+            
+            // Apply the background color
+            const bgColor = getQuadrantColor(colorIdx, status);
+            if(bgColor) {
+                quad.css('background-color', bgColor);
+            }
         }
 
         $(document).on('click', 'button[data-key]', function(e) {
@@ -125,12 +453,14 @@
 
         const handleKeyPress = (key) => {
             key = key.toLowerCase();
-            if (!key.match(/^[a-zA-Z]$/) && key !== 'enter' && key !== 'backspace') {
+            // Accept hex characters (0-9, a-f), enter, and backspace
+            const isHexChar = /^[0-9a-f]$/.test(key);
+            if (!isHexChar && key !== 'enter' && key !== 'backspace') {
                 return;
             }
             if(key === 'enter') {
                 if(currentValue.length !== WORD_LENGTH) {
-                    // Add shake effect for "not enough letters"
+                    // Add shake effect for "not enough characters"
                     const currentRow = $('.row-' + row_idx);
                     currentRow.addClass('shake');
                     // Remove the class after the animation finishes
@@ -148,46 +478,79 @@
                     let result = data.result;
                     const currentRow = $('.row-' + row_idx);
 
-                    // Animate the Tile Flip with staggered effect
-                    for(let i = 0; i < result.length; i++) {
-                        // Use a setTimeout to create the staggered effect
-                        setTimeout(() => {
-                            const tile = currentRow.find('.col-' + (i + 1));
-                            
-                            // Add the animation class to start the flip
-                            tile.addClass('flip-in');
+                    // Animate each position (6 positions, each with 4 color boxes)
+                    for(let position = 0; position < 6; position++) {
+                        for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
+                            setTimeout(() => {
+                                const tileContainer = currentRow.find('.col-' + (position + 1));
+                                const colorBox = tileContainer.find('.tile-backgrounds .quad-' + (colorIdx + 1));
+                                
+                                // Add the animation class to start the flip
+                                colorBox.addClass('flip-in');
 
-                            // Determine the result class
-                            let statusClass = '';
-                            if(result[i] === COLOR_CORRECT) statusClass = 'correct';
-                            else if(result[i] === COLOR_PRESENT) statusClass = 'present';
-                            else statusClass = 'absent';
-                            
-                            // The color is applied during the animation by CSS,
-                            // but we add the final class for state.
-                            tile.addClass(statusClass);
+                                // Determine the result class and color
+                                let statusClass = '';
+                                let bgColor = null;
+                                
+                                if(result[colorIdx][position] === COLOR_CORRECT) {
+                                    statusClass = 'correct';
+                                    bgColor = getQuadrantColor(colorIdx, 'correct');
+                                } else if(result[colorIdx][position] === COLOR_PRESENT) {
+                                    statusClass = 'present';
+                                    bgColor = getQuadrantColor(colorIdx, 'present');
+                                } else {
+                                    statusClass = 'absent';
+                                }
+                                
+                                // Apply color and class
+                                colorBox.addClass(statusClass);
+                                if(bgColor) {
+                                    colorBox.css('background-color', bgColor);
+                                }
 
-                        }, i * ANIMATION_TILE_FLIP_STAGGER_MS); // Stagger each tile flip
+                            }, (position * NUM_COLORS + colorIdx) * ANIMATION_TILE_FLIP_STAGGER_MS);
+                        }
                     }
 
                     // After the last tile has flipped, check for a win
                     setTimeout(() => {
                         // Update the keyboard state
-                        for(let i = 0; i < result.length; i++) {
-                            const letter = guessToProcess[i].toLowerCase();
-                            if(result[i] === COLOR_CORRECT) {
-                                updateKeyboardState(letter, 'correct');
-                            } else if(result[i] === COLOR_PRESENT) {
-                                updateKeyboardState(letter, 'present');
-                            } else {
-                                updateKeyboardState(letter, 'absent');
+                        for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
+                            for(let charIdx = 0; charIdx < 6; charIdx++) {
+                                const char = guessToProcess[charIdx].toLowerCase();
+                                if(result[colorIdx][charIdx] === COLOR_CORRECT) {
+                                    updateKeyboardState(char, colorIdx, 'correct');
+                                } else if(result[colorIdx][charIdx] === COLOR_PRESENT) {
+                                    updateKeyboardState(char, colorIdx, 'present');
+                                } else {
+                                    updateKeyboardState(char, colorIdx, 'absent');
+                                }
                             }
                         }
 
-                        // Check for a win
-                        const isWin = result === WIN_CONDITION;
+                        // Update color display with correctly guessed characters
+                        for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
+                            let displayHex = '';
+                            let hasAnyCorrect = false;
+                            
+                            for(let position = 0; position < 6; position++) {
+                                if(result[colorIdx][position] === 'G') {
+                                    displayHex += guessToProcess[position].toUpperCase();
+                                    hasAnyCorrect = true;
+                                } else {
+                                    displayHex += '?';
+                                }
+                            }
+                            
+                            // Update the display
+                            updateColorDisplay(colorIdx, displayHex, displayHex.indexOf('?') < displayHex.length);
+                        }
+
+                        // Check for a win (all 4 colors correct)
+                        const isWin = result.every(colorResult => colorResult === 'GGGGGG');
                         if (isWin) {
-                            for(let i = 0; i < WORD_LENGTH; i++) {
+                            // Bounce animation for all tile containers
+                            for(let i = 0; i < 6; i++) {
                                 setTimeout(() => {
                                     currentRow.find('.col-' + (i + 1)).addClass('bounce');
                                 }, i * ANIMATION_BOUNCE_STAGGER_MS); 
@@ -203,7 +566,7 @@
                                 });
                             }
                         }
-                    }, 5 * 350); // Wait for all flips to finish (5 tiles * 350ms stagger)
+                    }, WORD_LENGTH * ANIMATION_TILE_FLIP_STAGGER_MS); // Wait for all flips to finish
 
                 }).fail(function(err) {
                     const currentRow = $('.row-' + row_idx);
@@ -219,20 +582,32 @@
             }
             if(key === 'backspace') {
                 currentValue = currentValue.slice(0, -1);
-                if(col_idx > 1) {
+                if(currentValue.length >= 0) {
                     col_idx -= 1;
+                    // Clear the next box that would be filled
+                    if(col_idx == WORD_LENGTH){
+                        $('.row-color-preview[data-row="' + row_idx + '"]').css("background", "rgba(255, 255, 255, 0.05)");
+                    }
+                    if (col_idx <= 6) {
+                        const tileContainer = $('.row-' + row_idx + ' .col-' + col_idx).find(".tile-content");
+                        tileContainer.text('');
+                    }
                 }
-                $('.row-' + row_idx + ' .col-' + (col_idx)).text('');
                 return;
             }
             if(key.length !== 1){
                 return;
             }
             key = key.toUpperCase();
-            if(col_idx <= 5) {
+            if(currentValue.length < WORD_LENGTH) {
                 currentValue += key;
-                $('.row-' + row_idx + ' .col-' + (col_idx)).text(key);
+
+                const tileContainer = $('.row-' + row_idx + ' .col-' + col_idx).find(".tile-content");
+                tileContainer.text(key);
                 col_idx += 1;
+                if (col_idx == WORD_LENGTH + 1){
+                    $('.row-color-preview[data-row="' + row_idx + '"]').css("background", "#"+currentValue);
+                }
             }
         }
 
@@ -246,85 +621,312 @@
             const rowIdx = i + 1;
             const guessValue = guess.word;
             const result = guess.result;
-            for(let j=0; j<guessValue.length; j++) {
-                const colIdx = j + 1;
-                const letter = guessValue[j];
-                const tile = $('.row-' + rowIdx + ' .col-' + colIdx);
-                tile.text(letter.toUpperCase());
-                if(result[j] === 'G') {
-                    tile.addClass('correct');
-                } else if(result[j] === 'Y') {
-                    tile.addClass('present');
-                } else {
-                    tile.addClass('absent');
+            
+            // Fill in the tiles - iterate by position (6 positions), then by color (4 colors each)
+            for(let position = 0; position < 6; position++) {
+                const char = guessValue[position];
+                const tileContainer = $('.row-' + rowIdx + ' .col-' + (position + 1)).find(".tile-content");
+                tileContainer.text(char.toUpperCase()); 
+                for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
+                    const charIdx = colorIdx * 6 + position;
+                    const colorBox = $('.row-' + rowIdx + ' .col-' + (position + 1)).find('.tile-backgrounds .quad-' + (colorIdx + 1));
+
+                    let statusClass = '';
+                    let bgColor = null;
+                    
+                    if(result[colorIdx][position] === 'G') {
+                        statusClass = 'correct';
+                        bgColor = getQuadrantColor(colorIdx, 'correct');
+                    } else if(result[colorIdx][position] === 'Y') {
+                        statusClass = 'present';
+                        bgColor = getQuadrantColor(colorIdx, 'present');
+                    } else {
+                        statusClass = 'absent';
+                    }
+                    
+                    colorBox.addClass(statusClass);
+                    if(bgColor) {
+                        colorBox.css('background-color', bgColor);
+                    }
+                    
+                    const lowerChar = char.toLowerCase();
+                    if(result[colorIdx][position] === 'G') {
+                        updateKeyboardState(lowerChar, colorIdx, 'correct');
+                    } else if(result[colorIdx][position] === 'Y') {
+                        updateKeyboardState(lowerChar, colorIdx, 'present');
+                    } else {
+                        updateKeyboardState(lowerChar, colorIdx, 'absent');
+                    }
                 }
-                const lowerLetter = letter.toLowerCase();
-                if(result[j] === 'G') {
-                    updateKeyboardState(lowerLetter, 'correct');
-                } else if(result[j] === 'Y') {
-                    updateKeyboardState(lowerLetter, 'present');
-                } else {
-                    updateKeyboardState(lowerLetter, 'absent');
+            }
+            
+            // Update color display with correctly guessed characters
+            for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
+                // Build the partial hex code, showing correct chars and ? for unknown
+                let displayHex = '';
+                let hasAnyCorrect = false;
+                
+                for(let position = 0; position < 6; position++) {
+                    if(result[colorIdx][position] === 'G') {
+                        displayHex += guessValue[position].toUpperCase();
+                        hasAnyCorrect = true;
+                    } else {
+                        displayHex += '?';
+                    }
+                }
+                
+                // Update the display if at least one character is correct
+                if(hasAnyCorrect) {
+                    updateColorDisplay(colorIdx, displayHex, hasAnyCorrect);
                 }
             }
         }
+
+        // Load the actual colors from the game when the page loads
+        $(document).ready(function() {
+            
+            {% if game_id %}
+            $.get('/api/games/{{ game_id }}/').done(function(gameData) {
+                if (gameData.status && gameData.status !== 'IN_PROGRESS') {
+                    // Game is over, reveal the hex codes
+                    revealColors();
+                }
+            });
+            {% endif %}
+        });
     </script>
 {% endblock %}
 {% block content%}
-<!-- Game Board - Dynamically generated based on MAX_GUESSES and WORD_LENGTH -->
+<!-- Color Display Section - Shows 4 unknown hex colors -->
+<div id="color-display">
+    <div class="color-box" data-color="1">
+        <div class="color-swatch"></div>
+        <div class="color-label">#??????</div>
+    </div>
+    <div class="color-box" data-color="2">
+        <div class="color-swatch"></div>
+        <div class="color-label">#??????</div>
+    </div>
+    <div class="color-box" data-color="3">
+        <div class="color-swatch"></div>
+        <div class="color-label">#??????</div>
+    </div>
+    <div class="color-box" data-color="4">
+        <div class="color-swatch"></div>
+        <div class="color-label">#??????</div>
+    </div>
+</div>
+
+<!-- Custom Tooltip -->
+<div id="custom-tooltip" class="custom-tooltip">
+    <div class="tooltip-content"></div>
+</div>
+
+<!-- Game Board - 6 tiles per row, each tile shows one character with 4-quadrant background -->
 <div id="game-board">
     {% for row in MAX_GUESSES_RANGE %}
     <!-- Row {{ row }} -->
     <div class="board-row row-{{ row }}">
-        {% for col in WORD_LENGTH_RANGE %}
-        <div class="tile col-{{ col }}"></div>
+        {% for position in "123456" %}
+        <!-- Tile {{ forloop.counter }} - position {{ forloop.counter }} in all 4 hex colors -->
+        <div class="tile col-{{ forloop.counter }}">
+            <div class="tile-backgrounds">
+                <div class="quad quad-1" data-color="1"></div>
+                <div class="quad quad-2" data-color="2"></div>
+                <div class="quad quad-3" data-color="3"></div>
+                <div class="quad quad-4" data-color="4"></div>
+            </div>
+            <div class="tile-content">
+            </div>
+        </div>
         {% endfor %}
+        <!-- Row color preview - shows user's guessed colors -->
+        <div class="row-color-preview" data-row="{{ row }}"></div>
     </div>
     {% endfor %}
 </div>
 
-<!-- On-screen Keyboard -->
+<!-- Unified Hex Keyboard -->
 <div id="keyboard">
     <div class="keyboard-row">
-        <button data-key="q">q</button>
-        <button data-key="w">w</button>
-        <button data-key="e">e</button>
-        <button data-key="r">r</button>
-        <button data-key="t">t</button>
-        <button data-key="y">y</button>
-        <button data-key="u">u</button>
-        <button data-key="i">i</button>
-        <button data-key="o">o</button>
-        <button data-key="p">p</button>
+        <button data-key="1">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">1</span>
+        </button>
+        <button data-key="2">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">2</span>
+        </button>
+        <button data-key="3">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">3</span>
+        </button>
+        <button data-key="4">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">4</span>
+        </button>
+        <button data-key="5">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">5</span>
+        </button>
+        <button data-key="6">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">6</span>
+        </button>
+        <button data-key="7">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">7</span>
+        </button>
+        <button data-key="8">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">8</span>
+        </button>
+        <button data-key="9">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">9</span>
+        </button>
+        <button data-key="0">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">0</span>
+        </button>
     </div>
     <div class="keyboard-row">
-        <button data-key="a">a</button>
-        <button data-key="s">s</button>
-        <button data-key="d">d</button>
-        <button data-key="f">f</button>
-        <button data-key="g">g</button>
-        <button data-key="h">h</button>
-        <button data-key="j">j</button>
-        <button data-key="k">k</button>
-        <button data-key="l">l</button>
+        <button data-key="a">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">A</span>
+        </button>
+        <button data-key="b">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">B</span>
+        </button>
+        <button data-key="c">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">C</span>
+        </button>
+        <button data-key="d">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">D</span>
+        </button>
+        <button data-key="e">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">E</span>
+        </button>
+        <button data-key="f">
+            <div class="key-backgrounds">
+                <div class="quad quad-1"></div>
+                <div class="quad quad-2"></div>
+                <div class="quad quad-3"></div>
+                <div class="quad quad-4"></div>
+            </div>
+            <span class="key-text">F</span>
+        </button>
     </div>
     <div class="keyboard-row">
         <button data-key="enter" class="large">Enter</button>
-        <button data-key="z">z</button>
-        <button data-key="x">x</button>
-        <button data-key="c">c</button>
-        <button data-key="v">v</button>
-        <button data-key="b">b</button>
-        <button data-key="n">n</button>
-        <button data-key="m">m</button>
-        <button data-key="backspace" class="large"><svg viewBox="0 -0.5 25 25" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M5.91006 12.6651L8.35606 15.5261C8.59533 15.82 8.95209 15.9935 9.33106 16.0001L13.0501 15.9931H16.2391C18.0288 16.0036 19.4885 14.5618 19.5001 12.7721V10.2221C19.4891 8.43193 18.0292 6.98953 16.2391 7.00006L9.33106 7.00706C8.95226 7.01341 8.59552 7.18647 8.35606 7.48006L5.91006 10.3421C5.36331 11.0199 5.36331 11.9872 5.91006 12.6651V12.6651Z" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-darkreader-inline-stroke="" style="--darkreader-inline-stroke: var(--darkreader-text-000000, #e8e6e3);"></path> <path d="M12.1603 9.46359C11.864 9.17409 11.3892 9.17957 11.0997 9.47582C10.8102 9.77207 10.8156 10.2469 11.1119 10.5364L12.1603 9.46359ZM12.6469 12.0364C12.9431 12.3259 13.418 12.3204 13.7075 12.0242C13.997 11.7279 13.9915 11.2531 13.6953 10.9636L12.6469 12.0364ZM13.6963 10.9646C13.4006 10.6745 12.9258 10.6791 12.6357 10.9748C12.3456 11.2705 12.3502 11.7453 12.6458 12.0354L13.6963 10.9646ZM14.1748 13.5354C14.4705 13.8255 14.9454 13.8209 15.2355 13.5252C15.5255 13.2295 15.521 12.7547 15.2253 12.4646L14.1748 13.5354ZM13.6953 12.0364C13.9915 11.7469 13.997 11.2721 13.7075 10.9758C13.418 10.6796 12.9431 10.6741 12.6469 10.9636L13.6953 12.0364ZM11.1119 12.4636C10.8156 12.7531 10.8102 13.2279 11.0997 13.5242C11.3892 13.8204 11.864 13.8259 12.1603 13.5364L11.1119 12.4636ZM12.6458 10.9646C12.3502 11.2547 12.3456 11.7295 12.6357 12.0252C12.9258 12.3209 13.4006 12.3255 13.6963 12.0354L12.6458 10.9646ZM15.2253 10.5354C15.521 10.2453 15.5255 9.77046 15.2355 9.47477C14.9454 9.17909 14.4705 9.17454 14.1748 9.46462L15.2253 10.5354ZM11.1119 10.5364L12.6469 12.0364L13.6953 10.9636L12.1603 9.46359L11.1119 10.5364ZM12.6458 12.0354L14.1748 13.5354L15.2253 12.4646L13.6963 10.9646L12.6458 12.0354ZM12.6469 10.9636L11.1119 12.4636L12.1603 13.5364L13.6953 12.0364L12.6469 10.9636ZM13.6963 12.0354L15.2253 10.5354L14.1748 9.46462L12.6458 10.9646L13.6963 12.0354Z" fill="#ffffff" data-darkreader-inline-fill="" style="--darkreader-inline-fill: var(--darkreader-background-000000, #ffffff);"></path> </g></svg></button>
+        <button data-key="backspace" class="large">
+            <svg viewBox="0 -0.5 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g><path fill-rule="evenodd" clip-rule="evenodd" d="M5.91006 12.6651L8.35606 15.5261C8.59533 15.82 8.95209 15.9935 9.33106 16.0001L13.0501 15.9931H16.2391C18.0288 16.0036 19.4885 14.5618 19.5001 12.7721V10.2221C19.4891 8.43193 18.0292 6.98953 16.2391 7.00006L9.33106 7.00706C8.95226 7.01341 8.59552 7.18647 8.35606 7.48006L5.91006 10.3421C5.36331 11.0199 5.36331 11.9872 5.91006 12.6651V12.6651Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M12.1603 9.46359C11.864 9.17409 11.3892 9.17957 11.0997 9.47582C10.8102 9.77207 10.8156 10.2469 11.1119 10.5364L12.1603 9.46359ZM12.6469 12.0364C12.9431 12.3259 13.418 12.3204 13.7075 12.0242C13.997 11.7279 13.9915 11.2531 13.6953 10.9636L12.6469 12.0364ZM13.6963 10.9646C13.4006 10.6745 12.9258 10.6791 12.6357 10.9748C12.3456 11.2705 12.3502 11.7453 12.6458 12.0354L13.6963 10.9646ZM14.1748 13.5354C14.4705 13.8255 14.9454 13.8209 15.2355 13.5252C15.5255 13.2295 15.521 12.7547 15.2253 12.4646L14.1748 13.5354ZM13.6953 12.0364C13.9915 11.7469 13.997 11.2721 13.7075 10.9758C13.418 10.6796 12.9431 10.6741 12.6469 10.9636L13.6953 12.0364ZM11.1119 12.4636C10.8156 12.7531 10.8102 13.2279 11.0997 13.5242C11.3892 13.8204 11.864 13.8259 12.1603 13.5364L11.1119 12.4636ZM12.6458 10.9646C12.3502 11.2547 12.3456 11.7295 12.6357 12.0252C12.9258 12.3209 13.4006 12.3255 13.6963 12.0354L12.6458 10.9646ZM15.2253 10.5354C15.521 10.2453 15.5255 9.77046 15.2355 9.47477C14.9454 9.17909 14.4705 9.17454 14.1748 9.46462L15.2253 10.5354ZM11.1119 10.5364L12.6469 12.0364L13.6953 10.9636L12.1603 9.46359L11.1119 10.5364ZM12.6458 12.0354L14.1748 13.5354L15.2253 12.4646L13.6963 10.9646L12.6458 12.0354ZM12.6469 10.9636L11.1119 12.4636L12.1603 13.5364L13.6953 12.0364L12.6469 10.9636ZM13.6963 12.0354L15.2253 10.5354L14.1748 9.46462L12.6458 10.9646L13.6963 12.0354Z" fill="currentColor"></path></g>
+            </svg>
+        </button>
     </div>
 </div>
 
 <div id="game-modal" class="modal-overlay">
     <div class="modal-content">
         <h2 id="modal-title">You Won!</h2>
-        <p>The solution was: <strong id="modal-solution">SLATE</strong></p>
+        <div id="modal-colors" class="modal-color-display">
+            <div class="modal-color-item">
+                <div class="modal-color-swatch" data-color="1"></div>
+                <div class="modal-color-label" data-color="1">#??????</div>
+            </div>
+            <div class="modal-color-item">
+                <div class="modal-color-swatch" data-color="2"></div>
+                <div class="modal-color-label" data-color="2">#??????</div>
+            </div>
+            <div class="modal-color-item">
+                <div class="modal-color-swatch" data-color="3"></div>
+                <div class="modal-color-label" data-color="3">#??????</div>
+            </div>
+            <div class="modal-color-item">
+                <div class="modal-color-swatch" data-color="4"></div>
+                <div class="modal-color-label" data-color="4">#??????</div>
+            </div>
+        </div>
         <button id="play-again-button" class="large">Play Again</button>
     </div>
 </div>

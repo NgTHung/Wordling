@@ -5,14 +5,14 @@ from django.contrib.auth.models import User
 class GameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Game
-        fields = ['user', 'key', 'status', 'created_at', 'updated_at']
-        read_only_fields = ['user', 'created_at', 'updated_at']
+        fields = ['user', 'pallet', 'status', 'created_at', 'updated_at', 'is_nightmare']
+        read_only_fields = ['user', 'created_at', 'updated_at', 'is_nightmare']
 
 class GuessSerializer(serializers.ModelSerializer):
     class Meta:
         model = Guess
-        fields = ['game', 'value', 'is_correct']
-        read_only_fields = ['game', 'value', 'is_correct', 'created_at']
+        fields = ['game', 'value', 'correct_bitmask']
+        read_only_fields = ['game', 'value', 'correct_bitmask', 'created_at']
 
 class UserSerializer(serializers.ModelSerializer):
     games = serializers.PrimaryKeyRelatedField(

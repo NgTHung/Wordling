@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Google",
+    "theme": "Brands",
+    "codes": ["4285F4", "EA4335", "FBBC05", "34A853"]
+  },
+  {
+    "name": "Iron Man",
+    "theme": "Superheroes",
+    "codes": ["AA0404", "F1C347", "353839", "B3B6B7"]
+  },
+  {
+    "name": "Discord",
+    "theme": "Brands",
+    "codes": ["5865F2", "FEE75C", "57F287", "ED4245"]
+  },
+  {
+    "name": "Pokemon FireRed",
+    "theme": "Video Games",
+    "codes": ["872214", "2514C9", "47B09D", "E6BF3E"]
+  }
+]

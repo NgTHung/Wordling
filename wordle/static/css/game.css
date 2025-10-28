@@ -1,0 +1,396 @@
+/* =================================================================== */
+/*           QUADHEXLE GAME PAGE - MINIMALIST THEME                    */
+/* =================================================================== */
+
+/* --- CUSTOM TOOLTIP --- */
+.custom-tooltip {
+    position: fixed;
+    z-index: 10000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.custom-tooltip.visible {
+    opacity: 1;
+}
+
+.tooltip-content {
+    background-color: rgba(40, 40, 42, 0.95);
+    color: var(--color-text);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    white-space: pre-line;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--color-border);
+    font-family: 'Courier New', monospace;
+}
+
+.tooltip-content .tooltip-line {
+    display: block;
+    margin: 2px 0;
+}
+
+.tooltip-content .status-correct {
+    color: var(--color-correct);
+    font-weight: bold;
+}
+
+.tooltip-content .status-present {
+    color: var(--color-present);
+    font-weight: bold;
+}
+
+.tooltip-content .status-wrong {
+    color: #666;
+    font-weight: bold;
+}
+
+.tooltip-content .status-none {
+    color: #666;
+    font-style: italic;
+}
+
+/* --- COLOR DISPLAY SECTION --- */
+#color-display {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 2rem;
+    width: 100%;
+    max-width: var(--board-max-width);
+}
+
+.color-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.color-swatch {
+    width: 75%;
+    aspect-ratio: 1 / 1;
+    border: 2px solid var(--color-border);
+    border-radius: 4px;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    transition: all 0.3s ease;
+}
+
+.color-swatch.lit {
+    opacity: 1;
+}
+
+.color-box:hover .color-swatch {
+    transform: scale(1.05);
+}
+
+.color-label {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--color-text);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.05em;
+    transition: opacity 0.3s ease;
+}
+
+.color-label .lit-char {
+    opacity: 1;
+    text-shadow: 0 0 8px currentColor;
+}
+
+/* --- GAME BOARD ADAPTATIONS --- */
+/* --- GAME BOARD STYLING --- */
+#game-board {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    max-width: 500px;
+    margin: 1.5rem auto;
+    padding: 1rem;
+}
+
+.board-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Row color preview - shows guessed colors at end of each row */
+.row-color-preview {
+    display: flex;
+    gap: 2px;
+    margin-left: 12px;
+    padding: 4px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.row-color-swatch {
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    transition: all 0.3s ease;
+}
+
+.row-color-swatch[data-filled="true"] {
+    border-color: var(--color-present);
+}
+
+/* Tile - looks like classic Wordle tile */
+.tile {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 62px;
+    height: 62px;
+    border: 2px solid var(--color-border);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: background-color 0.3s ease;
+}
+
+/* 4-quadrant background - divided into 4 parts */
+.tile-backgrounds {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    z-index: 0;
+}
+
+.quad {
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: background-color 0.3s ease;
+}
+
+/* Quadrant positioning: top-left, top-right, bottom-left, bottom-right */
+.quad-1 { grid-area: 1 / 1 / 2 / 2; } /* top-left */
+.quad-2 { grid-area: 1 / 2 / 2 / 3; } /* top-right */
+.quad-3 { grid-area: 2 / 1 / 3 / 2; } /* bottom-left */
+.quad-4 { grid-area: 2 / 2 / 3 / 3; } /* bottom-right */
+
+.quad.absent {
+    background-color: var(--color-absent);
+}
+
+/* Tile content - character display */
+.tile-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+}
+
+.char {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    text-transform: uppercase;
+    line-height: 1;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Animations */
+@keyframes flip {
+    0% {
+        transform: rotateX(0deg);
+    }
+    50% {
+        transform: rotateX(90deg);
+    }
+    100% {
+        transform: rotateX(0deg);
+    }
+}
+
+.tile.flip-in {
+    animation: flip 0.6s ease;
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.tile.bounce {
+    animation: bounce 0.5s ease;
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-5px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translateX(5px);
+    }
+}
+
+.board-row.shake {
+    animation: shake 0.6s ease;
+}
+
+/* --- HEX KEYBOARD STYLING --- */
+#keyboard {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    max-width: 600px;
+    margin: 1.5rem auto;
+    padding: 1rem;
+}
+
+.keyboard-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+}
+
+.keyboard-row button {
+    position: relative;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    border: 2px solid var(--color-border);
+    padding: 0;
+    min-width: 40px;
+    height: 58px;
+    flex-grow: 1;
+    max-width: 60px;
+    border-radius: 4px;
+    background-color: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+    text-transform: uppercase;
+    user-select: none;
+    font-size: 1.1rem;
+    transition: transform 0.1s, background-color 0.3s ease;
+    overflow: hidden;
+}
+
+.keyboard-row button:hover {
+    transform: translateY(-2px);
+}
+
+.keyboard-row button:active {
+    transform: translateY(0);
+}
+
+.keyboard-row button.large {
+    flex-grow: 2;
+    max-width: none;
+    font-size: 0.9rem;
+}
+
+/* 4-quadrant background for keyboard keys */
+.key-backgrounds {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    z-index: 0;
+}
+
+/* Key text displayed on top */
+.key-text {
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Keyboard key states - update all 4 quadrants */
+.keyboard-row button.correct .quad {
+    background-color: var(--color-correct);
+}
+
+.keyboard-row button.present .quad {
+    background-color: var(--color-present);
+}
+
+.keyboard-row button.absent .quad {
+    background-color: var(--color-absent);
+    opacity: 0.6;
+}
+
+/* SVG icon in backspace button */
+.keyboard-row button svg {
+    position: relative;
+    z-index: 1;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+}
+
+/* --- RESPONSIVE ADJUSTMENTS --- */
+@media (max-width: 768px) {
+    .tile {
+        width: 56px;
+        height: 56px;
+    }
+    
+    .char {
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 480px) {
+    #color-display {
+        gap: 8px;
+    }
+    
+    .color-swatch {
+        border-width: 1px;
+    }
+    
+    .color-label {
+        font-size: 0.75rem;
+    }
+    
+    .keyboard-row button {
+        min-width: 32px;
+        height: 52px;
+        font-size: 1rem;
+    }
+    
+    .tile {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .char {
+        font-size: 0.8rem;
+    }
+}
+
+/* --- GAME STATE INDICATORS --- */
+.board-row.disabled {
+    pointer-events: none;
+    /* opacity: 0.7; */
+}

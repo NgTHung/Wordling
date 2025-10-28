@@ -11,8 +11,8 @@ env = environ.Env()
 env.read_env()
 
 # ===== Game Rules =====
-"""Core game mechanics that define how Wordle gameplay works"""
-WORD_LENGTH = int(env('GAME_WORD_LENGTH', default=5))
+"""Core game mechanics that define how Quadhexle gameplay works"""
+WORD_LENGTH = int(env('GAME_WORD_LENGTH', default=6))
 MAX_GUESSES = int(env('GAME_MAX_GUESSES', default=6))
 
 # ===== Animation Timings (milliseconds) =====

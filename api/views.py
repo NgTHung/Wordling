@@ -2,14 +2,15 @@ from django.contrib.auth.models import User
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from api.models import Game, Guess, Word
+from api.models import Game, Guess
 from api.serializers import GameSerializer, GuessSerializer, UserSerializer
 from rest_framework import permissions
 from rest_framework.reverse import reverse
 from api.utils import color_word
 from rest_framework import authentication
 from django.http import HttpRequest
-from api.constants import WORD_LENGTH, MAX_GUESSES
+from api.constants import COLOR_CORRECT, WORD_LENGTH, MAX_GUESSES
+from string import hexdigits
 
 class SubSessionAuthentication(authentication.SessionAuthentication):
     def authenticate(self, request: HttpRequest):
@@ -31,7 +32,9 @@ class GameList(generics.ListCreateAPIView):
         serializer = self.get_serializer(queryset, many=True)
         for game_data, game_instance in zip(serializer.data, queryset):
             if game_instance.status == Game.GameStatus.IN_PROGRESS:
-                game_data['key'] = '*****'
+                game_data['pallet'] = '*****'
+            else:
+                game_data['pallet'] = game_instance.pallet.name
         return Response(serializer.data)
 
 class GameDetail(generics.RetrieveUpdateAPIView):
@@ -43,7 +46,9 @@ class GameDetail(generics.RetrieveUpdateAPIView):
         serializer = self.get_serializer(instance)
         data = serializer.data
         if instance.status == Game.GameStatus.IN_PROGRESS:
-            data['key'] = '*****' 
+            data['pallet'] = '*****'
+        else:
+            data['pallet'] = instance.pallet.name
         return Response(data)
     
 class GuessList(generics.ListCreateAPIView):
@@ -56,25 +61,32 @@ class GuessList(generics.ListCreateAPIView):
         if request.session.get("game_id") is None:
             return Response({'error': 'No active game in session.'}, status=400)
         try:
-            word = Word.objects.get(value=word_value)
-        except Word.DoesNotExist:
-            return Response({'error': 'Word does not exist.'}, status=400)
-        try:
             game = Game.objects.get(id=request.session["game_id"])
         except Game.DoesNotExist:
             return Response({'error': 'Game not found.'}, status=400)
         if game.status != Game.GameStatus.IN_PROGRESS:
             return Response({'error': 'Game is not in progress.'}, status=400)
-        if Guess.objects.filter(game=game, value=word).exists():
+        if Guess.objects.filter(game=game, value=word_value).exists():
             return Response({'error': 'Word has already been guessed.'}, status=400)
-        if len(word_value) != len(game.key):
+        if len(word_value) != WORD_LENGTH:
             return Response({'error': 'Word length mismatch.'}, status=400)
-        serializer = self.get_serializer(data={'game': game.pk, 'value': word.pk, 'is_correct': word_value == game.key})
+        for char in word_value:
+            if char not in hexdigits:
+                return Response({'error': 'Invalid character in word.'}, status=400)
+        word = word_value.upper()
+        ret = color_word(word_value, game.pallet.colors)
+        c_bitmask = ''
+        for i in ret:
+            if i == COLOR_CORRECT*WORD_LENGTH:
+                c_bitmask += '1'
+            else:
+                c_bitmask += '0'
+        serializer = self.get_serializer(data={'game': game.pk, 'value': word_value, 'correct_bitmask': c_bitmask})
         if serializer.is_valid():
             guess_count = Guess.objects.filter(game=game).count()
             if request.user.is_authenticated:
                 profile = request.user.userprofile
-                if word_value == game.key:
+                if c_bitmask == '1' * 4:
                     profile.games_won += 1
                     profile.current_streak += 1
                     if profile.current_streak > profile.max_streak:
@@ -83,9 +95,8 @@ class GuessList(generics.ListCreateAPIView):
                 elif guess_count + 1 >= MAX_GUESSES:
                     profile.current_streak = 0
                 profile.save()
-            serializer.save(game=game, value=word, is_correct=(word_value == game.key))
-            ret = color_word(word_value, game.key)
-            if word_value == game.key:
+            serializer.save(game=game, value=word, correct_bitmask=c_bitmask)
+            if c_bitmask == '1' * 4:
                 game.status = Game.GameStatus.WON
                 game.save()
             elif guess_count >= MAX_GUESSES - 1:
@@ -119,7 +130,7 @@ class GiveUpAPIView(APIView):
             return Response({'error': 'Game is not in progress.'}, status=400)
         game.status = Game.GameStatus.LOST
         game.save()
-        return Response({'message': 'Game marked as lost.', 'key': game.key}, status=200)
+        return Response({'message': 'Game marked as lost.', 'colors': game.pallet.colors}, status=200)
     
 class ApiRootView(APIView):
     permission_classes = [permissions.AllowAny]

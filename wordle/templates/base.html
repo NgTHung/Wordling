@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <title>{% block title %}Django Wordle{% endblock %}</title>
+    <title>{% block title %}Django Quadhexle{% endblock %}</title>
 
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="icon" href="{% static 'favicon/favicon.ico' %}" type="image/x-icon">
@@ -16,7 +16,7 @@
 
     <main class="game-container">
         <header>
-            <h1><a href="{% url 'game' %}">WORDLE</a></h1>
+            <h1><a href="{% url 'game' %}">QUADHEXLE</a></h1>
         </header>
         {% if request.resolver_match.view_name == 'game' %}
         <div id="confirmation-toast" class="toast">
@@ -27,7 +27,12 @@
             </div>
         </div>
         <div class="header-actions">
-            <button id="give-up-button" class="icon-button" title="Give Up" data-tooltip="Give Up">
+            <button id="blend-toggle-button" class="icon-button floating-action-button" title="Toggle Color Blend" data-tooltip="Blend Colors">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24">
+                    <path fill="var(--color-text)" d="M17.66 7.93L12 2.27 6.34 7.93c-3.12 3.12-3.12 8.19 0 11.31C7.9 20.8 9.95 21.58 12 21.58c2.05 0 4.1-.78 5.66-2.34 3.12-3.12 3.12-8.19 0-11.31zM12 19.59c-1.6 0-3.11-.62-4.24-1.76C6.62 16.69 6 15.19 6 13.59s.62-3.11 1.76-4.24L12 5.1v14.49z"></path>
+                </svg>
+            </button>
+            <button id="give-up-button" class="icon-button floating-action-button" title="Give Up" data-tooltip="Give Up">
                 <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24">
                     <path fill="var(--color-text)" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
                 </svg>
@@ -53,6 +58,10 @@
                     <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="currentColor" d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-8v2h8v14z"></path></svg>
                 </a>
             {% endif %}
+            <a href="{% url 'nightmare' %}" class="header-button" title="Nightmare Mode">
+                <span>Nightmare</span>
+                <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path></svg>
+            </a>
         </div>
         {% endif %}
         <!-- This is where the main content of your pages will go. -->
