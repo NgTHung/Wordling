@@ -218,7 +218,6 @@ class NightmareGuessList(generics.ListCreateAPIView):
         c_bitmask = game.correct_bitmask
         is_any_correct = False
         for i in ret:
-            # Check if all positions are correct (G, V for vampire, or S for broken are all "correct")
             is_all_correct = all(
                 char in [COLOR_CORRECT, COLOR_VAMPIRE_CORRECT, COLOR_BROKEN] 
                 for char in i

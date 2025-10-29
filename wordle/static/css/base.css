@@ -4,15 +4,10 @@
     --color-border: #797063;
     --color-tile-border-active: #565758;
 
-    /* Tile Evaluation Colors */
     --color-correct: #538d4e;
-    /* Green */
     --color-present: #b59f3b;
-    /* Yellow */
     --color-absent: #3a3a3c;
-    /* Dark Gray */
 
-    /* Animations */
     --animation-duration: 0.5s;
     
     --color-error: #be2929;
@@ -20,7 +15,6 @@
     --animation-duration-flip: 0.6s;
     --animation-duration-bounce: 1s;
 
-    /* Game Board Dimensions (from environment variables) */
     --board-columns: 5;
     --board-rows: 6;
     --tile-gap: 5px;
@@ -28,9 +22,6 @@
     --tile-size: 75px;
 }
 
-
-
-/* --- GENERAL BODY & LAYOUT --- */
 *,
 *::before,
 *::after {
@@ -49,7 +40,6 @@ body {
     min-height: 100vh;
 }
 
-/* --- GAME CONTAINER --- */
 .game-container {
     display: flex;
     flex-direction: column;
@@ -58,11 +48,8 @@ body {
     height: 100%;
     width: 100%;
     max-width: 500px;
-    /* Max width for larger screens */
     padding: 10px;
 }
-
-/* --- HEADER --- */
 header {
     width: 100%;
     text-align: center;
@@ -77,8 +64,6 @@ header h1 {
     letter-spacing: 0.1em;
     font-weight: bold;
 }
-
-/* --- MAIN GAME BOARD --- */
 #game-board {
     display: grid;
     grid-template-rows: repeat(var(--board-rows), 1fr);
@@ -86,7 +71,6 @@ header h1 {
     margin-bottom: 2rem;
     width: 100%;
     max-width: var(--board-max-width);
-    /* Constrain the board width */
 }
 
 .board-row {
@@ -98,7 +82,6 @@ header h1 {
 .tile {
     width: 100%;
     aspect-ratio: 1 / 1;
-    /* Makes the tile a perfect square */
     border: 2px solid var(--color-border);
     display: inline-flex;
     justify-content: center;
@@ -111,14 +94,11 @@ header h1 {
     border: 2px solid #797063;
 }
 
-/* State for when a letter is typed but not submitted */
 .tile.filled {
     border-color: var(--color-tile-border-active);
     transform: scale(1.05);
-    /* Small pop effect */
 }
 
-/* --- TILE EVALUATION STYLES (for after a guess) --- */
 .tile.correct {
     background-color: var(--color-correct);
     border-color: var(--color-correct);
@@ -134,14 +114,12 @@ header h1 {
     border-color: var(--color-absent);
 }
 
-/* --- ON-SCREEN KEYBOARD --- */
 #keyboard {
     display: flex;
     flex-direction: column;
     gap: 8px;
     width: 100%;
     margin-top: auto;
-    /* Pushes keyboard to the bottom */
 }
 
 .keyboard-row {
@@ -159,7 +137,6 @@ header h1 {
     flex-grow: 1;
     border-radius: 4px;
     background-color: #4b5255;
-    /* A lighter gray for keys */
     color: var(--color-text);
     cursor: pointer;
     text-transform: uppercase;
@@ -172,10 +149,7 @@ header h1 {
 
 .keyboard-row button.large {
     flex-grow: 1.5;
-    /* Makes Enter/Backspace wider */
 }
-
-/* Keyboard key evaluation states */
 .keyboard-row button.correct {
     background-color: var(--color-correct);
 }
@@ -231,7 +205,7 @@ header h1 {
   }
   100% {
     transform: rotateX(0);
-    /* The final background/border color will be set by the status class (.correct, .present) */
+    
   }
 }
 
@@ -278,7 +252,7 @@ header h1 {
 }
 header {
     position: relative;
-    /* ... your other header styles ... */
+    
     width: 100%;
     text-align: center;
     border-bottom: 1px solid var(--color-border);
@@ -286,30 +260,17 @@ header {
     margin-bottom: 1rem;
 }
 
-/* Style for the new refresh button */
-.icon-button {
-    /* Positioning */
-    /* position: absolute;
-    top: 50%; 
-    right: 15px;
-    transform: translateY(-50%);  */
 
-    /* Reset default button styles */
+.icon-button {
     position: relative; 
     background: none;
     border: none;
     padding: 5px;
     margin: 0;
-    
-    /* position: absolute; */
     top: 50%;
-    /* transform: translateY(-50%); */
-    cursor: pointer;
-
-    /* Appearance */
     cursor: pointer;
     opacity: 0.7;
-    border-radius: 4px; /* Optional: slightly rounded corners */
+    border-radius: 4px;
     transition: opacity 0.2s ease-in-out, background-color 0.2s ease-in-out;
 }
 
@@ -318,11 +279,9 @@ header {
     top: 50%;
     right: 15px;
     transform: translateY(-50%);
-
-    /* Use Flexbox to stack the buttons vertically */
     display: flex;
     flex-direction: column;
-    gap: 8px; /* This creates a nice space between the buttons */
+    gap: 8px;
 }
 
 .user-actions {
@@ -330,11 +289,9 @@ header {
     top: 40px;
     right: 30px;
     transform: translateY(-50%);
-
-    /* Use Flexbox to stack the buttons vertically */
     display: flex;
     flex-direction: row;
-    gap: 8px; /* This creates a nice space between the buttons */
+    gap: 8px;
 }
 
 .header-button {
@@ -348,7 +305,7 @@ header {
     text-decoration: none;
     border-radius: 5px;
     font-weight: bold;
-    white-space: nowrap; /* Prevents text from wrapping */
+    white-space: nowrap; 
     transition: background-color 0.2s, width 0.3s ease, padding 0.3s ease, gap 0.3s ease;
     overflow: hidden;
     position: relative;
@@ -384,79 +341,64 @@ header {
 }
 
 .icon-button::before {
-    /* The magic: grabs the text from the data-tooltip attribute. */
     content: attr(data-tooltip);
-    
-    /* Positioning */
     position: absolute;
-    bottom: 100%; /* Position it directly above the button */
+    bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    margin-bottom: 8px; /* A little space between button and tooltip */
+    margin-bottom: 8px;
 
-    /* Appearance */
     background-color: #2c2c2e;
     color: #f8f8f8;
     padding: 6px 12px;
     border-radius: 5px;
     font-size: 0.85rem;
     font-weight: bold;
-    white-space: nowrap; /* Prevents the text from wrapping */
+    white-space: nowrap;
     box-shadow: 0 2px 8px rgba(0,0,0,0.5);
 
-    /* Hide it initially and prepare for animation */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
 }
 
-/* 3. Show the tooltip on hover. */
 .icon-button:hover::before {
     opacity: 1;
     visibility: visible;
 }
 
-/* Hover effect */
 .icon-button:hover {
     opacity: 1;
-    background-color: #3a3a3c; /* A subtle background on hover */
+    background-color: #3a3a3c;
 }
 
-/* Style for the SVG icon inside the button */
 .icon-button svg {
-    display: block; /* Removes any extra space below the icon */
+    display: block;
     width: 28px;
     height: 28px;
 }
 
 #give-up-button {
-    right: 20px; /* Space between the two buttons */
+    right: 20px;
 }
 
 #blend-toggle-button {
-    right: 20px; /* Space between the two buttons */
+    right: 20px;
 }
 
-/* --- Add these new styles for the modal --- */
 
 .modal-overlay {
-    /* Sizing & Positioning */
+
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     z-index: 1000;
-
-    /* Appearance */
     background-color: rgba(0, 0, 0, 0.75);
-    
-    /* Centering content */
     display: flex;
     justify-content: center;
     align-items: center;
-
-    /* Initially hidden */
     visibility: hidden;
     opacity: 0;
     transition: visibility 0s 0.3s, opacity 0.3s ease-in-out;
@@ -469,14 +411,13 @@ header {
 }
 
 .modal-content {
-    background-color: #2c2c2e; /* A dark panel color */
+    background-color: #2c2c2e;
     padding: 2rem;
     border-radius: 8px;
     text-align: center;
     width: 90%;
     max-width: 400px;
     
-    /* Animation */
     transform: scale(0.9);
     transition: transform 0.3s ease-in-out;
 }
@@ -495,7 +436,6 @@ header {
     margin: 1rem 0 2rem;
 }
 
-/* Modal challenge reveal */
 .modal-challenge-reveal {
     display: flex;
     justify-content: center;
@@ -560,14 +500,13 @@ header {
     border: 0;
     padding: 12px 20px;
     border-radius: 4px;
-    background-color: var(--color-correct); /* Green for success */
+    background-color: var(--color-correct);
     color: var(--color-text);
     cursor: pointer;
     text-transform: uppercase;
     font-size: 1.2rem;
 }
 
-/* Help Modal Styles */
 .help-modal-content {
     max-width: 600px;
     max-height: 85vh;
@@ -686,41 +625,32 @@ header {
     transform: translateY(0);
 }
 
-/* Adjust the position of the existing Refresh button */
 #refresh-button {
     right: 15px;
 }
 
-/* Add a distinct, "warning" hover effect for the Give Up button */
 #give-up-button:hover {
-    background-color: var(--color-error); /* Use your error red! */
+    background-color: var(--color-error);
     opacity: 1;
 }
 
-/* Your existing hover effect for other icon buttons (like refresh) */
 #refresh-button:hover {
     background-color: #3a3a3c;
     opacity: 1;
 }
-/* --- Add this style for the header link --- */
 
 header h1 a {
-    color: inherit; /* This makes the link inherit the color of its parent (the h1) */
-    text-decoration: none; /* This removes the default underline */
-    cursor: pointer; /* Ensures the mouse cursor changes to a pointer on hover */
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
 }
 
-/* --- Add these styles for the confirmation toast --- */
-
 .toast {
-    /* Positioning */
     position: fixed;
     top: 0;
     left: 50%;
-    transform: translate(-50%, -120%); /* Start off-screen */
-    z-index: 2000; /* Highest z-index to be on top of everything */
-
-    /* Appearance */
+    transform: translate(-50%, -120%);
+    z-index: 2000;
     background-color: #2c2c2e;
     color: var(--color-text);
     padding: 1rem 1.5rem;
@@ -728,17 +658,14 @@ header h1 a {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     border: 1px solid var(--color-border);
     
-    /* Content Layout */
     display: flex;
     align-items: center;
     gap: 1.5rem;
-
-    /* Animation */
-    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); /* Smooth slide effect */
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .toast.visible {
-    transform: translate(-50%, 20px); /* Slide into view */
+    transform: translate(-50%, 20px);
 }
 
 .toast p {
@@ -776,7 +703,7 @@ header h1 a {
 .toast-button.cancel:hover {
     background-color: #565758;
 }
-/* --- Styles for Django Messages Framework --- */
+
 .messages-container {
     width: 100%;
     max-width: 500px;
@@ -794,16 +721,15 @@ header h1 a {
     font-weight: bold;
 }
 
-/* Django tags messages as 'success', 'info', 'warning', 'error' */
 .message.success {
-    background-color: var(--color-correct); /* Green */
+    background-color: var(--color-correct);
 }
 .message.info {
-    background-color: var(--color-present); /* Yellow */
+    background-color: var(--color-present);
 }
 .message.warning {
-    background-color: #e67e22; /* Orange */
+    background-color: #e67e22;
 }
 .message.error {
-    background-color: var(--color-error); /* Red */
+    background-color: var(--color-error);
 }

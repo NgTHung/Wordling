@@ -5,14 +5,12 @@
 {% endblock %}
 {% block extra_js %}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <!-- Load game constants from Django context -->
+
     <script>
-        // Game Rules
         const WORD_LENGTH = {{ WORD_LENGTH }};
         const MAX_GUESSES = {{ MAX_GUESSES }};
-        const NUM_COLORS = 4; // Always 4 hex colors to guess
+        const NUM_COLORS = 4
 
-        // Animation Timings (milliseconds)
         const ANIMATION_SHAKE_MS = {{ ANIMATION_SHAKE_MS }};
         const ANIMATION_TILE_FLIP_STAGGER_MS = {{ ANIMATION_TILE_FLIP_STAGGER_MS }};
         const ANIMATION_BOUNCE_STAGGER_MS = {{ ANIMATION_BOUNCE_STAGGER_MS }};
@@ -20,27 +18,22 @@
         const ANIMATION_MODAL_DELAY_MS = {{ ANIMATION_MODAL_DELAY_MS }};
         const ANIMATION_TOAST_TIMEOUT_MS = {{ ANIMATION_TOAST_TIMEOUT_MS }};
 
-        // UI Dimensions
         const UI_TILE_GAP_PX = {{ UI_TILE_GAP_PX }};
         const UI_BOARD_MAX_WIDTH_PX = {{ UI_BOARD_MAX_WIDTH_PX }};
         const UI_BOARD_COLUMNS = {{ UI_BOARD_COLUMNS }};
 
-        // Color codes
         const COLOR_CORRECT = 'G';
         const COLOR_PRESENT = 'Y';
         const COLOR_ABSENT = 'B';
 
-        // Win condition
         const WIN_CONDITION = 'G'.repeat(WORD_LENGTH);
         
-        // Store the actual color palette
         {% if pallet_colors %}
         const PALLET_COLORS = {{ pallet_colors|safe }};
         {% else %}
         const PALLET_COLORS = ['000000', '000000', '000000', '000000'];
         {% endif %}
 
-        // Set CSS variables for dynamic board sizing
         document.documentElement.style.setProperty('--board-columns', UI_BOARD_COLUMNS);
         document.documentElement.style.setProperty('--board-rows', MAX_GUESSES);
         document.documentElement.style.setProperty('--tile-gap', UI_TILE_GAP_PX + 'px');
@@ -50,23 +43,23 @@
         let toastTimeout;
         let correctBitmask = '0000';
         function showConfirmationToast() {
-            // Clear any existing timer to prevent premature closing
+
             clearTimeout(toastTimeout);
             $('#confirmation-toast').addClass('visible');
 
-            // Automatically hide the toast after ANIMATION_TOAST_TIMEOUT_MS if no action is taken
+
             toastTimeout = setTimeout(() => {
                 hideConfirmationToast();
             }, ANIMATION_TOAST_TIMEOUT_MS);
         }
         function hideConfirmationToast() {
-            // Clear the timer so it doesn't try to hide an already hidden toast
+
             clearTimeout(toastTimeout);
             $('#confirmation-toast').removeClass('visible');
         }
 
         function revealColors() {
-            // Reveal all 4 hex colors from the pallet
+
             {% if pallet_colors %}
             const colors = {{ pallet_colors|safe }};
             for(let i = 0; i < 4; i++) {
@@ -78,48 +71,42 @@
             {% endif %}
         }
         
-        // Helper function to get color for quadrant based on status
         function getQuadrantColor(colorIdx, status) {
-            const hexColor = PALLET_COLORS[colorIdx];
-            
+            const hexColor = PALLET_COLORS[colorIdx];    
             if (status === 'correct') {
-                // Full color
                 return '#' + hexColor;
             } else if (status === 'present') {
-                // Dimmed version (40% opacity)
                 return 'rgba(' + parseInt(hexColor.substr(0,2), 16) + ',' + 
                        parseInt(hexColor.substr(2,2), 16) + ',' + 
                        parseInt(hexColor.substr(4,2), 16) + ', 0.4)';
             } else {
-                // Black/default
                 return null;
             }
         }
-        
-        // Update color display progressively
+
         function updateColorDisplay(colorIdx, displayHex, hasCorrect) {
             const colorBox = $('#color-display .color-box[data-color="' + (colorIdx + 1) + '"]');
             const hexString = PALLET_COLORS[colorIdx];
             
-            // Get current display text (without HTML)
+
             const currentLabel = colorBox.find('.color-label').html() || '#??????';
-            const currentHex = currentLabel.replace(/<[^>]*>/g, '').substring(1); // Remove # and HTML tags
-            // Merge: keep existing chars, only replace ? with new chars
+            const currentHex = currentLabel.replace(/<[^>]*>/g, '').substring(1
+
             let mergedHex = '';
             for(let i = 0; i < 6; i++) {
                 if(currentHex[i] && currentHex[i] !== '?') {
-                    // Keep existing revealed character
+
                     mergedHex += currentHex[i];
                 } else if(displayHex[i] && displayHex[i] !== '?') {
-                    // Use new revealed character
+
                     mergedHex += displayHex[i];
                 } else {
-                    // Still unknown
+
                     mergedHex += '?';
                 }
             }
             
-            // Build HTML with lit/unlit characters
+
             let labelHtml = '#';
             for(let i = 0; i < 6; i++) {
                 const char = mergedHex[i];
@@ -131,24 +118,24 @@
             }
             colorBox.find('.color-label').html(labelHtml);
             
-            // Calculate how many characters are revealed (0-6)
+
             const revealedCount = mergedHex.split('').filter(c => c !== '?').length;
             const swatch = colorBox.find('.color-swatch');
             
             if(revealedCount === 0) {
-                // No characters revealed - keep dimmed background
+
                 swatch.css('background', 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)');
                 swatch.removeClass('lit');
             } else if(revealedCount === 6) {
-                // All characters revealed - show full color
+
                 swatch.css('background', '#' + mergedHex).addClass('lit');
             } else {
-                // Partial reveal - transition from black to color
-                // Calculate opacity based on revealed characters (0% to 100%)
+
+
                 const opacity = revealedCount / 6;
                 const lookup = {1: '19', 2: '33', 3: '4D', 4: '66', 5: '80', 6: 'FF'};
                 
-                // Create a gradient that transitions from dark to the actual color
+
                 const fullColor = hexString;
                 swatch.css('background', '#' + fullColor + lookup[revealedCount]);
                 swatch.addClass('lit');
@@ -160,10 +147,10 @@
             const title = $('#modal-title');
             console.log('Showing modal with solution:', solution);
             
-            // Reveal the colors in the display
+
             revealColors();
             
-            // Parse solution and display colors in modal
+
             for (let i = 0; i < 4 && i < solution.length; i++) {
                 const hexColor = solution[i].replace('#', '').toUpperCase();
                 const swatch = $('#modal-colors .modal-color-swatch[data-color="' + (i + 1) + '"]');
@@ -179,7 +166,7 @@
                 title.text('Game Over');
             }
 
-            // Use a small delay to ensure the DOM is updated before the animation
+
             setTimeout(() => {
                 modal.addClass('visible');
             }, ANIMATION_MODAL_DELAY_MS);
@@ -210,11 +197,11 @@
             });
         });
 
-        // Blend toggle functionality
+
         let isBlendMode = false;
         
         function blendColors(color1, color2, color3, color4) {
-            // Parse hex colors to RGB
+
             const parseHex = (hex) => {
                 hex = hex.replace('#', '');
                 return {
@@ -229,19 +216,19 @@
             const c3 = parseHex(color3);
             const c4 = parseHex(color4);
             
-            // Average the RGB values and dim them (multiply by 0.4 for 40% brightness)
+
             const dimFactor = 0.6;
             const avgR = Math.round(((c1.r + c2.r + c3.r + c4.r) / 4) * dimFactor);
             const avgG = Math.round(((c1.g + c2.g + c3.g + c4.g) / 4) * dimFactor);
             const avgB = Math.round(((c1.b + c2.b + c3.b + c4.b) / 4) * dimFactor);
             
-            // Convert back to hex
+
             const toHex = (n) => n.toString(16).padStart(2, '0');
             return '#' + toHex(avgR) + toHex(avgG) + toHex(avgB);
         }
         
         function getColorStatus(colorIdx, quadElement) {
-            // Check the quad's classes to determine status
+
             if (quadElement.hasClass('correct')) {
                 return 'Correct';
             } else if (quadElement.hasClass('present')) {
@@ -253,7 +240,7 @@
         }
         
         function updateSingleTileBlend(tileElement) {
-            // Update blend for a single tile without resetting all tooltips
+
             if (!isBlendMode) return;
             
             const quads = $(tileElement).find('.quad');
@@ -298,11 +285,11 @@
         }
         
         function applyBlenderToElements() {
-            // Apply blended colors to tiles and keyboard
+
             $('.tile, button[data-key]').each(function() {
                 const quads = $(this).find('.quad');
                 if (quads.length === 4) {
-                    // Get colors and statuses from each quadrant
+
                     const colors = [];
                     const statuses = [];
                     let hasAnyColor = false;
@@ -314,10 +301,10 @@
                         
                         statuses.push(status);
                         
-                        // Convert rgba/rgb to hex or use black for unguessed
+
                         if (bgColor && bgColor !== 'rgba(255, 255, 255, 0.1)' && bgColor !== 'transparent' && 
                             (quad.hasClass('correct') || quad.hasClass('present'))) {
-                            // Extract RGB values
+
                             const matches = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
                             if (matches) {
                                 const r = parseInt(matches[1]).toString(16).padStart(2, '0');
@@ -333,25 +320,25 @@
                         }
                     });
                     
-                    // Only blend if there's at least one color, otherwise keep black
+
                     let blendedColor = '#ffffff1a';
                     if (hasAnyColor) {
                         blendedColor = blendColors(colors[0], colors[1], colors[2], colors[3]);
                     }
                     
-                    // Hide quadrants and set blended background
+
                     quads.hide();
                     $(this).css('background-color', blendedColor);
                     
-                    // Store tooltip data
+
                     $(this).data('tooltip-statuses', statuses);
                 }
             });
             
-            // Remove old tooltip handlers before setting up new ones
+
             $('.tile, button[data-key]').off('mouseenter.customtooltip mouseleave.customtooltip mousemove.customtooltip');
             
-            // Setup custom tooltip handlers
+
             setupCustomTooltip();
         }
         
@@ -362,7 +349,7 @@
             if (isBlendMode) {
                 applyBlenderToElements();
             } else {
-                // Restore original quadrant display
+
                 $('.tile, button[data-key]').each(function() {
                     const quads = $(this).find('.quad');
                     if (quads.length === 4) {
@@ -372,7 +359,7 @@
                     }
                 });
                 
-                // Remove tooltip handlers
+
                 $('.tile, button[data-key]').off('mouseenter.customtooltip mouseleave.customtooltip mousemove.customtooltip');
             }
         }
@@ -384,7 +371,7 @@
             $('.tile, button[data-key]').on('mouseenter.customtooltip', function(e) {
                 const statuses = $(this).data('tooltip-statuses');
                 if (statuses && statuses.length === 4) {
-                    // Build tooltip HTML with color-coded statuses
+
                     let html = '';
                     for (let i = 0; i < 4; i++) {
                         const status = statuses[i];
@@ -401,12 +388,12 @@
                     
                     tooltipContent.html(html);
                     
-                    // Position tooltip immediately before showing
+
                     const offset = 15;
                     let left = e.clientX + offset;
                     let top = e.clientY + offset;
                     
-                    // Show tooltip briefly to get dimensions
+
                     tooltip.css({
                         left: left + 'px',
                         top: top + 'px',
@@ -417,7 +404,7 @@
                     const tooltipWidth = tooltip.outerWidth();
                     const tooltipHeight = tooltip.outerHeight();
                     
-                    // Adjust if tooltip goes off screen
+
                     if (left + tooltipWidth > window.innerWidth) {
                         left = e.clientX - tooltipWidth - offset;
                     }
@@ -425,7 +412,7 @@
                         top = e.clientY - tooltipHeight - offset;
                     }
                     
-                    // Position and show
+
                     tooltip.css({
                         left: left + 'px',
                         top: top + 'px',
@@ -435,7 +422,7 @@
                     tooltip.addClass('visible');
                 }
             }).on('mousemove.customtooltip', function(e) {
-                // Update position as mouse moves
+
                 const offset = 15;
                 const tooltipWidth = tooltip.outerWidth() || 0;
                 const tooltipHeight = tooltip.outerHeight() || 0;
@@ -443,7 +430,7 @@
                 let left = e.clientX + offset;
                 let top = e.clientY + offset;
                 
-                // Keep tooltip on screen
+
                 if (left + tooltipWidth > window.innerWidth) {
                     left = e.clientX - tooltipWidth - offset;
                 }
@@ -467,7 +454,7 @@
         var row_idx = 1;
         var col_idx = 1;
         const updateKeyboardState = (key, colorIdx, status) => {
-            // Initialize state for this key if it doesn't exist
+
             if (!keyboardState[key]) {
                 keyboardState[key] = ['', '', '', ''];
             }
@@ -486,7 +473,7 @@
             quad.removeClass('correct present absent');
             quad.addClass(status);
             
-            // Apply the background color
+
             const bgColor = getQuadrantColor(colorIdx, status);
             if(bgColor) {
                 quad.css('background-color', bgColor);
@@ -503,23 +490,23 @@
 
         const handleKeyPress = (key) => {
             key = key.toLowerCase();
-            // Accept hex characters (0-9, a-f), enter, and backspace
+
             const isHexChar = /^[0-9a-f]$/.test(key);
             if (!isHexChar && key !== 'enter' && key !== 'backspace') {
                 return;
             }
             if(key === 'enter') {
                 if(currentValue.length !== WORD_LENGTH) {
-                    // Add shake effect for "not enough characters"
+
                     const currentRow = $('.row-' + row_idx);
                     currentRow.addClass('shake');
-                    // Remove the class after the animation finishes
+
                     setTimeout(() => {
                         currentRow.removeClass('shake');
                     }, ANIMATION_SHAKE_MS);
                     return;
                 }
-                // Submit the current guess
+
                 $('.row-' + row_idx).addClass('submitted');
 
                 const guessToProcess = currentValue;
@@ -528,17 +515,17 @@
                     let result = data.result;
                     const currentRow = $('.row-' + row_idx);
 
-                    // Animate each position (6 positions, each with 4 color boxes)
+
                     for(let position = 0; position < 6; position++) {
                         for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
                             setTimeout(() => {
                                 const tileContainer = currentRow.find('.col-' + (position + 1));
                                 const colorBox = tileContainer.find('.tile-backgrounds .quad-' + (colorIdx + 1));
                                 
-                                // Add the animation class to start the flip
+
                                 colorBox.addClass('flip-in');
 
-                                // Determine the result class and color
+
                                 let statusClass = '';
                                 let bgColor = null;
                                 
@@ -552,18 +539,18 @@
                                     statusClass = 'absent';
                                 }
                                 
-                                // Apply color and class
+
                                 colorBox.addClass(statusClass);
                                 if(bgColor) {
                                     colorBox.css('background-color', bgColor);
                                 }
                                 
-                                // If blender mode is active, update this specific tile
+
                                 if (isBlendMode && colorIdx === NUM_COLORS - 1) {
-                                    // Only update after all 4 quadrants of this tile are done
+
                                     updateSingleTileBlend(tileContainer[0]);
                                     
-                                    // If this is the last tile, refresh all tooltip handlers
+
                                     if (position === 5) {
                                         $('.tile, button[data-key]').off('mouseenter.customtooltip mouseleave.customtooltip mousemove.customtooltip');
                                         setupCustomTooltip();
@@ -573,9 +560,9 @@
                         }
                     }
 
-                    // After the last tile has flipped, check for a win
+
                     setTimeout(() => {
-                        // Update the keyboard state
+
                         for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
                             for(let charIdx = 0; charIdx < 6; charIdx++) {
                                 const char = guessToProcess[charIdx].toLowerCase();
@@ -588,7 +575,7 @@
                                 }
                             }
                         }
-                        // Update color display with correctly guessed characters
+
                         for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
                             let displayHex = '';
                             let hasAnyCorrect = false;
@@ -603,25 +590,25 @@
                                 }
                             }
                             if(allCorrect) {
-                                // Mark this color as fully correct in the bitmask
+
                                 correctBitmask = correctBitmask.substring(0, colorIdx) + '1' + correctBitmask.substring(colorIdx + 1);
                             }
-                            // Update the display
+
                             updateColorDisplay(colorIdx, displayHex, displayHex.indexOf('?') < displayHex.length);
                         }
                         
-                        // If blender mode is active, reapply it to the newly updated row and keyboard
+
                         if (isBlendMode) {
-                            // Small delay to ensure DOM is fully updated before reapplying blender
+
                             setTimeout(() => {
                                 applyBlenderToElements();
                             }, 50);
                         }
 
                         
-                        // Check for a win (all 4 colors correct)
+
                         if (correctBitmask === '1111') {
-                            // Bounce animation for all tile containers
+
                             for(let i = 0; i < 6; i++) {
                                 setTimeout(() => {
                                     currentRow.find('.col-' + (i + 1)).addClass('bounce');
@@ -640,16 +627,16 @@
                                 });
                             }
                         }
-                    }, (WORD_LENGTH * NUM_COLORS) * ANIMATION_TILE_FLIP_STAGGER_MS); // Wait for all flips to finish (6 tiles × 4 colors)
+                    }, (WORD_LENGTH * NUM_COLORS) * ANIMATION_TILE_FLIP_STAGGER_MS
 
                 }).fail(function(err) {
                     const currentRow = $('.row-' + row_idx);
                     currentRow.addClass('shake invalid');
                     setTimeout(() => {
                         currentRow.removeClass('shake invalid');
-                    }, 700); // Animation is 0.6s, so 0.7s is a safe buffer.
+                    }, 700
 
-                    // 3. Re-enable the row so the user can try again.
+
                     currentRow.removeClass('submitted disabled');
                 });
                 return;
@@ -658,7 +645,7 @@
                 currentValue = currentValue.slice(0, -1);
                 if(currentValue.length >= 0) {
                     col_idx -= 1;
-                    // Clear the next box that would be filled
+
                     if(col_idx == WORD_LENGTH){
                         $('.row-color-preview[data-row="' + row_idx + '"]').css("background", "rgba(255, 255, 255, 0.05)");
                     }
@@ -696,7 +683,7 @@
             const guessValue = guess.word;
             const result = guess.result;
             
-            // Fill in the tiles - iterate by position (6 positions), then by color (4 colors each)
+
             for(let position = 0; position < 6; position++) {
                 const char = guessValue[position];
                 const tileContainer = $('.row-' + rowIdx + ' .col-' + (position + 1)).find(".tile-content");
@@ -734,9 +721,9 @@
                 }
             }
             
-            // Update color display with correctly guessed characters
+
             for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
-                // Build the partial hex code, showing correct chars and ? for unknown
+
                 let displayHex = '';
                 let hasAnyCorrect = false;
                 
@@ -749,7 +736,7 @@
                     }
                 }
                 
-                // Update the display if at least one character is correct
+
                 if(hasAnyCorrect) {
                     updateColorDisplay(colorIdx, displayHex, hasAnyCorrect);
                 }
@@ -757,10 +744,10 @@
             $('.row-color-preview[data-row="' + (i + 1) + '"]').css("background", "#"+guessValue);
         }
 
-        // Load the actual colors from the game when the page loads
+
         $(document).ready(function() {
             
-            // Help modal handlers
+
             $('#help-button').on('click', function() {
                 $('#help-modal').addClass('visible');
             });
@@ -769,7 +756,7 @@
                 $('#help-modal').removeClass('visible');
             });
             
-            // Close help modal when clicking outside
+
             $('#help-modal').on('click', function(e) {
                 if (e.target === this) {
                     $(this).removeClass('visible');
@@ -779,7 +766,7 @@
             {% if game_id %}
             $.get('/api/games/{{ game_id }}/').done(function(gameData) {
                 if (gameData.status && gameData.status !== 'IN_PROGRESS') {
-                    // Game is over, reveal the hex codes
+
                     revealColors();
                 }
             });
@@ -789,7 +776,6 @@
 {% endblock %}
 {% block content%}
 
-<!-- Help Modal -->
 <div id="help-modal" class="modal-overlay">
     <div class="modal-content help-modal-content">
         <button class="modal-close" id="help-modal-close">&times;</button>
@@ -825,7 +811,6 @@
     </div>
 </div>
 
-<!-- Color Display Section - Shows 4 unknown hex colors -->
 <div id="color-display">
     <div class="color-box" data-color="1">
         <div class="color-swatch"></div>
@@ -845,7 +830,6 @@
     </div>
 </div>
 
-<!-- Custom Tooltip -->
 <div id="custom-tooltip" class="custom-tooltip">
     <div class="tooltip-content"></div>
 </div>
@@ -853,18 +837,16 @@
 </div>
 </div>
 
-<!-- Custom Tooltip for Blend Mode -->
 <div id="custom-tooltip" class="custom-tooltip">
     <div class="tooltip-content"></div>
 </div>
 
-<!-- Game Board - 6 tiles per row, each tile shows one character with 4-quadrant background -->
 <div id="game-board">
     {% for row in MAX_GUESSES_RANGE %}
-    <!-- Row {{ row }} -->
+
     <div class="board-row row-{{ row }}">
         {% for position in "123456" %}
-        <!-- Tile {{ forloop.counter }} - position {{ forloop.counter }} in all 4 hex colors -->
+    
         <div class="tile col-{{ forloop.counter }}">
             <div class="tile-backgrounds">
                 <div class="quad quad-1" data-color="1"></div>
@@ -876,13 +858,12 @@
             </div>
         </div>
         {% endfor %}
-        <!-- Row color preview - shows user's guessed colors -->
+    
         <div class="row-color-preview" data-row="{{ row }}"></div>
     </div>
     {% endfor %}
 </div>
 
-<!-- Unified Hex Keyboard -->
 <div id="keyboard">
     <div class="keyboard-row">
         <button data-key="1">

@@ -1,45 +1,28 @@
-/* =================================================================== */
-/*           NEW, MORE INTERESTING HOME PAGE STYLES                    */
-/* =================================================================== */
-
-/* --- 1. The Blurred Background Effect --- */
-/* --- NEW STYLES FOR THE BLURRED BACKGROUND AND BODY --- */
-
 body {
-    /* The body itself no longer holds the background image */
-    background-color: #121213; /* A solid fallback color */
+
+    background-color: #121213;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    position: relative; /* Crucial for positioning the pseudo-element */
-    overflow-x: hidden; /* Prevents scrollbars from the scaled background */
+    position: relative;
+    overflow-x: hidden;
 }
 
-/* This pseudo-element is our new background layer */
 body::before {
     content: '';
-    position: fixed; /* Stays in place even when scrolling */
+    position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: -1; /* Pushes it behind all other content */
-
-    /* Apply the background image here */
-    background-image: url('/static/img/background.png'); /* Ensure this path is correct */
+    z-index: -1;
+    background-image: url('/static/img/background.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    
-    /* The magic: blur the background */
-    filter: blur(8px);
-    
-    /* Pro-tip: Slightly scale the background to hide blurry edges */
+    filter: blur(8px);    
     transform: scale(1.05);
 }
-/* --- NEW STYLES FOR THE "OPTIC LAYER" CONTENT PANELS --- */
-
-/* We target all your main content containers with a grouped selector */
 
 .hero-container {
     display: flex;
@@ -50,30 +33,27 @@ body::before {
     flex-grow: 1;
     padding: 2rem;
     width: 100%;
-    position: relative; /* Needed for the pseudo-element */
+    position: relative;
 }
 
 .hero-content {
-    background-color: rgba(44, 44, 46, 0.6); /* Fallback for older browsers */
+    background-color: rgba(44, 44, 46, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 2rem 3rem;
     position: relative;
     z-index: 1;
-    overflow: hidden; /* Ensures the blur stays within the rounded corners */
-
-    /* The frosted glass effect! */
+    overflow: hidden;
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
 }
+
 @supports not ((-webkit-backdrop-filter: none) or (backdrop-filter: none)) {
   .hero-content {
-    background-color: rgba(44, 44, 46, 0.85); /* Darker fallback if blur isn't supported */
+    background-color: rgba(44, 44, 46, 0.85);
   }
 }
 
-
-/* --- 2. The Thematic "Tile" Title --- */
 .hero-title {
     display: flex;
     gap: 10px;
@@ -81,7 +61,7 @@ body::before {
 }
 
 .hero-title .tile {
-    width: 65px; /* Larger tiles for the title */
+    width: 65px;
     height: 65px;
     font-size: 3rem;
     border: 2px solid var(--color-border);
@@ -100,10 +80,6 @@ body::before {
     box-shadow: 0 8px 20px rgba(0,0,0,0.4);
 }
 
-
-/* --- 3. Animations & New Content Styling --- */
-
-/* Keyframe for the title tile flip */
 @keyframes tile-flip-in {
     from {
         transform: rotateX(90deg);
@@ -115,7 +91,6 @@ body::before {
     }
 }
 
-/* Keyframe for other elements fading in */
 @keyframes fade-in-up {
     from {
         transform: translateY(20px);
@@ -127,7 +102,6 @@ body::before {
     }
 }
 
-/* Apply animations */
 .hero-title .tile {
     animation: tile-flip-in 0.6s ease-out backwards;
 }
@@ -141,7 +115,6 @@ body::before {
     animation: fade-in-up 0.7s ease-out 0.9s backwards;
 }
 
-/* Add delays for each title tile to create a cascade effect */
 .hero-title .tile:nth-child(1) { animation-delay: 0.1s; }
 .hero-title .tile:nth-child(2) { animation-delay: 0.2s; }
 .hero-title .tile:nth-child(3) { animation-delay: 0.3s; }
@@ -150,7 +123,6 @@ body::before {
 .hero-title .tile:nth-child(6) { animation-delay: 0.6s; }
 
 
-/* Feature Highlights Section */
 .feature-highlights {
     display: flex;
     gap: 2rem;
@@ -162,7 +134,7 @@ body::before {
 .hero-button {
     display: inline-block;
     padding: 16px 40px;
-    border: none; /* Make sure there's no default border */
+    border: none;
     border-radius: 8px;
     font-weight: bold;
     text-decoration: none;
@@ -180,8 +152,6 @@ body::before {
     box-shadow: 0 6px 20px rgba(83, 141, 78, 0.5);
 }
 
-
-/* --- REVISED Feature Card and SVG Styles --- */
 .feature-highlights {
     display: flex;
     justify-content: center;
@@ -189,7 +159,7 @@ body::before {
     margin-top: 3.5rem;
     border-top: 1px solid var(--color-border);
     padding-top: 2rem;
-    width: 100%; /* Ensure it takes up space */
+    width: 100%;
 }
 
 .feature-card {
@@ -197,16 +167,15 @@ body::before {
     flex-direction: column;
     align-items: center;
     gap: 0.75rem;
-    max-width: 160px; /* Slightly wider */
+    max-width: 160px;
 }
 
-/* This is the key fix for the SVGs */
 .feature-card svg {
     width: 36px;
     height: 36px;
-    stroke: var(--color-present); /* Use the theme's yellow for the icon stroke */
-    stroke-width: 1.5; /* A consistent, clean line thickness */
-    fill: none; /* Important: ensures only the lines are drawn */
+    stroke: var(--color-present);
+    stroke-width: 1.5;
+    fill: none;
 }
 
 .feature-card h4 {
@@ -222,32 +191,30 @@ body::before {
     line-height: 1.4;
 }
 
-/* --- Add these styles for the secondary login link on the home page --- */
-
 .hero-actions {
-    /* Add this to make the new text appear below the button */
+
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem; /* Creates space between the button and the text */
+    gap: 1.5rem;
 }
 
 .secondary-action-text {
     margin: 0;
     font-size: 1rem;
-    color: #a0a0a0; /* Muted gray for the text part */
+    color: #a0a0a0;
 }
 
 .secondary-action-link {
-    color: var(--color-text); /* White, to stand out slightly */
+    color: var(--color-text);
     font-weight: bold;
     text-decoration: none;
-    border-bottom: 2px solid var(--color-present); /* Yellow underline */
+    border-bottom: 2px solid var(--color-present);
     padding-bottom: 2px;
     transition: color 0.2s, border-color 0.2s;
 }
 
 .secondary-action-link:hover {
-    color: var(--color-present); /* Text turns yellow on hover */
-    border-color: var(--color-text); /* Underline turns white on hover */
+    color: var(--color-present);
+    border-color: var(--color-text);
 }

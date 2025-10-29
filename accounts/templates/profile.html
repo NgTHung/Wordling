@@ -12,10 +12,8 @@
         <span class="username">{{ user.username }}</span>
     </div>
 
-    <!-- This new wrapper will hold our two main content panels -->
     <div class="profile-content">
 
-        <!-- Panel 1: Key Statistics -->
         <div class="stats-panel">
             <div class="stat-item">
                 <div class="stat-value">{{ profile.games_played }}</div>
@@ -35,7 +33,6 @@
             </div>
         </div>
 
-        <!-- Panel 2: Guess Distribution Chart -->
         <div class="distribution-panel">
             <h3>Guess Distribution</h3>
             <div class="distribution-chart">
@@ -44,7 +41,6 @@
                     <div class="dist-label">{{ forloop.counter }}</div>
                     <div class="dist-bar-container">
                         {% widthratio count max_dist_value 100 as bar_width %}
-                        <!-- We add a class if the count is zero for different styling -->
                         <div class="dist-bar {% if count > 0 %}has-wins{% endif %}" style="width: {{ bar_width }}%;">
                             <span class="dist-count">{{ count }}</span>
                         </div>

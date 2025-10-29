@@ -70,8 +70,6 @@ class LeaderboardView(ListView):
     model = UserProfile
     template_name = 'leaderboard.html'
     context_object_name = 'profiles'
-    
-    # Show top LEADERBOARD_PAGE_SIZE players
     paginate_by = LEADERBOARD_PAGE_SIZE
 
     def get_queryset(self):

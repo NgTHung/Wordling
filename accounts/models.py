@@ -6,7 +6,6 @@ from api.constants import MAX_GUESSES, WIN_PERCENTAGE_MULTIPLIER
 from api.models import Game
 
 def get_default_guess_distribution():
-    """Create default guess distribution array with MAX_GUESSES slots."""
     return [0] * MAX_GUESSES
 
 class UserProfile(models.Model):
@@ -15,8 +14,6 @@ class UserProfile(models.Model):
     current_streak = models.IntegerField(default=0)
     max_streak = models.IntegerField(default=0)
     
-    # Stores the number of wins for each guess count (1 to 6)
-    # e.g., [10, 25, 30, 15, 5, 2] means 10 wins on the 1st guess, etc.
     guess_distribution = models.JSONField(default=get_default_guess_distribution)
 
     def __str__(self):
@@ -30,9 +27,7 @@ class UserProfile(models.Model):
     @property
     def games_played(self):
         return Game.objects.filter(user=self.user).count()
-
-# This is a Django Signal. It ensures that whenever a new User is created,
-# a corresponding UserProfile is automatically created with it.
+    
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:

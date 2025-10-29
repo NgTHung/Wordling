@@ -1,11 +1,9 @@
-/* --- Add these new styles for the login/auth forms --- */
-
 .form-container {
     width: 100%;
     max-width: 450px;
     margin: 2rem auto;
     padding: 2rem;
-    background-color: #2c2c2e; /* Dark panel color, like the modal */
+    background-color: #2c2c2e;
     border-radius: 8px;
     border: 1px solid var(--color-border);
 }
@@ -22,7 +20,7 @@
     text-align: center;
     margin-top: 0;
     margin-bottom: 2rem;
-    color: #a0a0a0; /* A lighter gray for the subheading */
+    color: #a0a0a0;
 }
 
 .form-group {
@@ -36,7 +34,6 @@
     color: #d7dadc;
 }
 
-/* Style for the input fields Django generates */
 .form-container input[type="text"],
 .form-container input[type="password"],
 .form-container input[type="email"] {
@@ -53,10 +50,9 @@
 .form-container input:focus {
     outline: none;
     border-color: var(--color-correct);
-    box-shadow: 0 0 5px rgba(83, 141, 78, 0.7); /* Green glow on focus */
+    box-shadow: 0 0 5px rgba(83, 141, 78, 0.7);
 }
 
-/* Style for the submit button */
 .form-container button[type="submit"] {
     width: 100%;
     padding: 12px 20px;
@@ -72,10 +68,9 @@
 }
 
 .form-container button[type="submit"]:hover {
-    background-color: #6aaa64; /* Lighter green on hover */
+    background-color: #6aaa64;
 }
 
-/* Styles for error messages */
 .error-list {
     color: var(--color-error);
     font-size: 0.9rem;
@@ -95,7 +90,6 @@
     margin-bottom: 1.5rem;
 }
 
-/* Styles for the links at the bottom of the form */
 .form-links {
     text-align: center;
     margin-top: 2rem;

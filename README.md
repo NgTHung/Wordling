@@ -1,61 +1,102 @@
-# Wordling
+# Quadhexle
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Django Version](https://img.shields.io/badge/django-5.2-green.svg)](https://www.djangoproject.com/)
 [![Django REST Framework](https://img.shields.io/badge/DRF-3.16-red.svg)](https://www.django-rest-framework.org/)
 
-A modern, full-featured implementation of the popular word-guessing game Wordle, built with Django. Features a polished animated web interface with glassmorphism effects, a comprehensive REST API, and a complete user account system for tracking statistics and competing on a global leaderboard.
+A unique and challenging color-guessing puzzle game built with Django. Unlike traditional Wordle, **Quadhexle** challenges you to simultaneously guess **four 6-digit hexadecimal color codes** in 9 tries. Features two game modes: Classic mode for strategic color puzzle-solving, and Nightmare mode with random gameplay-altering challenges.
 
 ---
 
-## Demo
+## Game Concept
 
-Check out Wordling in action:
+### What is Quadhexle?
 
-![Wordling Demo](ezgif.com-speed.gif)
+Quadhexle is a color-based puzzle game where you must deduce **four hidden hex color codes** (e.g., `#4285F4`, `#EA4335`, `#FBBC05`, `#34A853`). Each guess reveals feedback for all four colors simultaneously:
+
+- **Each tile is divided into 4 quadrants** — one for each color
+- **Full color** = Character in correct position for that color
+- **Dimmed color (40% opacity)** = Character exists in that color but wrong position  
+- **Black** = Character not in that color at all
+
+### Example Gameplay
+
+If the secret colors are:
+- Color 1: `4285F4`
+- Color 2: `EA4335`
+- Color 3: `FBBC05`
+- Color 4: `34A853`
+
+And you guess `123456`:
+- Position 1 (`1`): Color 3 shows dimmed (it contains `1` but wrong spot)
+- Position 2 (`2`): Color 1 shows full color (correct position!)
+- Position 3 (`3`): Colors 2 & 4 show dimmed
+- Position 4 (`4`): Colors 1 & 2 show dimmed
+- And so on...
 
 ---
 
 ## Key Features
 
-- **Classic Wordle Gameplay**
-  - Beautiful, responsive interface with smooth animations
-  - Tile flip effects, win celebrations, and invalid guess feedback
-  - Color-coded letter feedback (Green = correct position, Yellow = wrong position, Gray = not in word)
-  - Support for duplicate letter handling
+### Two Game Modes
 
-- **Highly Configurable**
-  - All game rules configurable via environment variables
-  - Customize word length, max guesses, animation timings, and UI dimensions
-  - No code changes needed - just update `.env` file
-  - Perfect for creating different difficulty modes
+**Classic Mode**
+- Guess four 6-digit hex colors in 9 attempts
+- Clean, strategic puzzle-solving with consistent feedback
+- Perfect for learning color theory and hex codes
+- Progressive revelation of each color
 
-- **User Account System**
-  - Complete registration and authentication flow
-  - Persistent game statistics tracking
-  - Win percentage and streak calculations
-  - Guess distribution analytics
+**Nightmare Mode**
+- All the challenge of Classic mode with added twist mechanics
+- Random challenge selected each game from 5 devious types:
+  - **LIAR** — Some feedback tiles are randomly flipped (probability increases each guess)
+  - **BROKEN** — Three random hex keys are marked as "broken" (dark red on keyboard)
+  - **AMNESIA** — All previous guess feedback erased when you find a correct color
+  - **GLITCH** — One color's "present/absent" feedback is swapped
+  - **VAMPIRE** — One color's feedback shows in gray (hidden color, replaced by `#666666`)
 
-- **Competitive Leaderboard**
-  - Public ranking system based on max streaks and win percentages
-  - Real-time statistics display
-  - Compare your performance with other players
+### Unique Visual Features
 
-- **REST API**
-  - Game creation and management endpoints
-  - Guess submission and validation
-  - User profile data access
+- **Quad-split tiles** showing simultaneous feedback for 4 colors
+- **Progressive color revelation** at top of screen
+- **Color preview column** showing your typed hex codes
+- **Blend toggle mode** — Combines quadrant colors into single blended tile with hover tooltips
+- **Glassmorphism UI** with frosted glass panels and smooth animations
+- **Themed color palettes** — Guess colors from Google, Discord, Pokemon, Marvel themes, etc.
 
-- **Modern UI/UX**
-  - Glassmorphism design with frosted glass panels
-  - Fully responsive layout for mobile and desktop
-  - jQuery-powered interactivity
-  - Clean, professional aesthetic
+### Highly Configurable
 
----
+- All game rules via environment variables (`.env` file)
+- Customize word length (default: 6), max guesses (default: 9)
+- Adjust animation timings, tile spacing, board dimensions
+- No code changes needed to modify difficulty
+- Easy to extend with new color palettes
 
-## Tech Stack
+### User Account System
+
+- Complete registration and authentication
+- Persistent game statistics tracking
+- Win percentage and streak calculations  
+- Guess distribution analytics (wins per attempt number)
+- Profile page with detailed stats
+
+### Competitive Leaderboard
+
+- Global rankings by max streak and win percentage
+- Paginated display (configurable page size)
+- Compare your performance with other players
+- Real-time statistics
+
+### REST API
+
+- Game creation and management endpoints
+- Guess submission and validation
+- User profile data access
+- Separate endpoints for Classic and Nightmare modes
+- Give-up functionality with answer reveal
+
+### Modern Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -63,7 +104,7 @@ Check out Wordling in action:
 | **Database** | SQLite (development), PostgreSQL-ready (production) |
 | **Frontend** | HTML5, CSS3, JavaScript (ES6+), jQuery 3.7 |
 | **Styling** | Custom CSS with Glassmorphism effects |
-| **Word List** | [dwyl/english-words](https://github.com/dwyl/english-words) (~370k words) |
+| **Color Palettes** | JSON-based themed color sets (Google, Discord, Marvel, etc.) |
 
 ---
 
@@ -78,11 +119,11 @@ Before you begin, ensure you have the following installed:
 
 ### Installation & Setup
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/NgTHung/Wordling.git
-    cd Wordling
-    ```
+1. **Clone the repository:**
+   ```bash
+   git clone -b quadhexle https://github.com/NgTHung/Wordling.git
+   cd Wordling
+   ```
 
 2. **Create and activate a virtual environment:**
    
@@ -114,7 +155,7 @@ Before you begin, ensure you have the following installed:
 
 5. **Apply database migrations:**
    
-   This will create the database schema and automatically load the word list from `words_alpha.txt`:
+   This will create the database schema and automatically load color palettes from `api/gamepallets.json`:
    ```bash
    python manage.py migrate
    ```
@@ -131,6 +172,8 @@ Before you begin, ensure you have the following installed:
 
 8. **Access the application:**
    - **Web Interface:** [http://localhost:8000/](http://localhost:8000/)
+   - **Classic Game:** [http://localhost:8000/game/](http://localhost:8000/game/)
+   - **Nightmare Mode:** [http://localhost:8000/nightmare/](http://localhost:8000/nightmare/)
    - **API Root:** [http://localhost:8000/api/](http://localhost:8000/api/)
    - **Admin Panel:** [http://localhost:8000/admin/](http://localhost:8000/admin/) (requires superuser)
 
@@ -138,7 +181,7 @@ Before you begin, ensure you have the following installed:
 
 ## Environment Configuration
 
-Wordling uses environment variables to configure both Django settings and game parameters. This makes it easy to customize the game without modifying code.
+Quadhexle uses environment variables to configure both Django settings and game parameters. This makes it easy to customize the game without modifying code.
 
 ### Setup
 
@@ -169,21 +212,10 @@ Customize core gameplay mechanics:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `GAME_WORD_LENGTH` | `5` | Number of letters in each word |
-| `GAME_MAX_GUESSES` | `6` | Maximum number of guesses allowed |
+| `GAME_WORD_LENGTH` | `6` | Length of each hex color code (hexadecimal digits) |
+| `GAME_MAX_GUESSES` | `9` | Maximum number of guesses allowed |
 
-**Example:** Create a harder mode with 6-letter words and only 5 guesses:
-```bash
-GAME_WORD_LENGTH=6
-GAME_MAX_GUESSES=5
-```
-
-> **⚠️ Important:** When changing `GAME_WORD_LENGTH`, you must repopulate the word database:
-> ```bash
-> python manage.py migrate --fake api 0003_word_game_status
-> python manage.py migrate
-> ```
-> This ensures only words of the correct length are loaded into the database.
+**Note:** The game is designed for 6-character hex codes guessing 4 colors simultaneously. Changing `GAME_WORD_LENGTH` will require adjustments to game logic and UI.
 
 #### Animation Timings (milliseconds)
 
@@ -192,7 +224,7 @@ Fine-tune the user experience by adjusting animation speeds:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ANIMATION_SHAKE_MS` | `600` | Duration of the "not enough letters" shake |
-| `ANIMATION_TILE_FLIP_STAGGER_MS` | `350` | Delay between each tile flip |
+| `ANIMATION_TILE_FLIP_STAGGER_MS` | `100` | Delay between each tile flip (4 quadrants per tile) |
 | `ANIMATION_BOUNCE_STAGGER_MS` | `100` | Delay between each bounce on win |
 | `ANIMATION_WIN_MODAL_DELAY_MS` | `1200` | Delay before showing the win modal |
 | `ANIMATION_MODAL_DELAY_MS` | `200` | Delay before modal animates in |
@@ -200,7 +232,7 @@ Fine-tune the user experience by adjusting animation speeds:
 
 **Example:** Faster animations for a snappier experience:
 ```bash
-ANIMATION_TILE_FLIP_STAGGER_MS=200
+ANIMATION_TILE_FLIP_STAGGER_MS=50
 ANIMATION_BOUNCE_STAGGER_MS=50
 ANIMATION_WIN_MODAL_DELAY_MS=800
 ```
@@ -213,7 +245,7 @@ Control visual layout:
 |----------|---------|-------------|
 | `UI_TILE_GAP_PX` | `5` | Gap between tiles in pixels |
 | `UI_BOARD_MAX_WIDTH_PX` | `350` | Maximum width of the game board |
-| `UI_BOARD_COLUMNS` | `5` | Number of columns (should match `GAME_WORD_LENGTH`) |
+| `UI_BOARD_COLUMNS` | `5` | Number of tile columns (adjust for aesthetics) |
 
 #### Pagination
 
@@ -229,12 +261,12 @@ SECRET_KEY='your-super-secret-key-here'
 DEBUG=True
 
 # Game Rules
-GAME_WORD_LENGTH=5
-GAME_MAX_GUESSES=6
+GAME_WORD_LENGTH=6
+GAME_MAX_GUESSES=9
 
 # Animation Timings (milliseconds)
 ANIMATION_SHAKE_MS=600
-ANIMATION_TILE_FLIP_STAGGER_MS=350
+ANIMATION_TILE_FLIP_STAGGER_MS=100
 ANIMATION_BOUNCE_STAGGER_MS=100
 ANIMATION_WIN_MODAL_DELAY_MS=1200
 ANIMATION_MODAL_DELAY_MS=200
@@ -249,84 +281,85 @@ UI_BOARD_COLUMNS=5
 LEADERBOARD_PAGE_SIZE=50
 ```
 
-### Testing Different Configurations
-
-You can easily test different game modes without changing code:
-
-**Easy Mode (4 letters, 7 guesses):**
-```bash
-GAME_WORD_LENGTH=4
-GAME_MAX_GUESSES=7
-```
-
-**Hard Mode (6 letters, 5 guesses):**
-```bash
-GAME_WORD_LENGTH=6
-GAME_MAX_GUESSES=5
-```
-
-**Important:** After changing `GAME_WORD_LENGTH`, you must repopulate the word database:
-```bash
-python manage.py migrate --fake api 0003_word_game_status
-python manage.py migrate
-```
-
-Then restart the development server:
-```bash
-python manage.py runserver
-```
-
 ---
 
 ## API Documentation
 
-The REST API provides programmatic access to all game functionality.
+The REST API provides programmatic access to game functionality for both Classic and Nightmare modes.
 
 ### Base URL
 ```
 http://localhost:8000/api/
 ```
 
-### Endpoints
+### Classic Mode Endpoints
 
 | Endpoint | Methods | Authentication | Description |
 |----------|---------|----------------|-------------|
 | `/api/` | `GET` | None | API root with endpoint links |
-| `/api/games/` | `GET`, `POST` | Session | List all games or create a new game |
+| `/api/games/` | `GET` | Session | List all classic games |
 | `/api/games/<id>/` | `GET`, `PATCH` | Session | Retrieve or update a specific game |
 | `/api/guesses/` | `GET`, `POST` | Session | List guesses or submit a new guess |
 | `/api/guesses/<id>/` | `GET` | Session | Retrieve a specific guess |
+| `/api/giveup/` | `GET` | Session | Forfeit current game and reveal the solution |
+
+### Nightmare Mode Endpoints
+
+| Endpoint | Methods | Authentication | Description |
+|----------|---------|----------------|-------------|
+| `/api/nightmare/games/` | `GET` | Session | List all nightmare games |
+| `/api/nightmare/games/<id>/` | `GET`, `PATCH` | Session | Retrieve or update a specific nightmare game |
+| `/api/nightmare/guesses/` | `GET`, `POST` | Session | List guesses or submit a new guess |
+| `/api/nightmare/guesses/<id>/` | `GET` | Session | Retrieve a specific guess |
+| `/api/nightmare/giveup/` | `GET` | Session | Forfeit current game and reveal the solution |
+
+### User Endpoints
+
+| Endpoint | Methods | Authentication | Description |
+|----------|---------|----------------|-------------|
 | `/api/users/` | `GET` | None | List all registered users |
 | `/api/users/<id>/` | `GET` | None | Retrieve a specific user's profile |
-| `/api/giveup/` | `GET` | Session | Forfeit current game and reveal the solution |
 
 ### Example API Requests
 
-**Create a new game:**
-```bash
-curl -X POST http://localhost:8000/api/games/ \
-  -H "Content-Type: application/json" \
-  --cookie "sessionid=YOUR_SESSION_ID"
-```
-
-**Submit a guess:**
+**Submit a guess (Classic mode):**
 ```bash
 curl -X POST http://localhost:8000/api/guesses/ \
   -H "Content-Type: application/json" \
-  -d '{"word": "hello"}' \
+  -d '{"word": "4285F4"}' \
   --cookie "sessionid=YOUR_SESSION_ID"
 ```
 
 **Response format for guess:**
 ```json
 {
-  "result": "GYBBB"
+  "result": ["GGBBBB", "BYBBBB", "BBGBBB", "BBBBYB"]
 }
 ```
-Where:
+
+Each string in the array represents feedback for one of the 4 colors:
 - `G` = Green (correct letter, correct position)
 - `Y` = Yellow (correct letter, wrong position)
-- `B` = Black/Gray (letter not in word)
+- `B` = Black/Gray (letter not in this color)
+
+**Nightmare mode response may include additional feedback characters:**
+- `V` = Vampire correct (correct position, but color hidden)
+- `M` = Vampire present (present, but color hidden)
+- `S`, `T`, `U` = Broken keyboard indicators
+
+**Give up (reveal solution):**
+```bash
+curl -X GET http://localhost:8000/api/giveup/ \
+  --cookie "sessionid=YOUR_SESSION_ID"
+```
+
+**Response:**
+```json
+{
+  "message": "Game marked as lost.",
+  "colors": ["4285F4", "EA4335", "FBBC05", "34A853"]
+}
+```
 
 ---
 
@@ -335,29 +368,39 @@ Where:
 ```
 Wordling/
 ├── api/                      # REST API application
-│   ├── models.py             # Game, Word, and Guess models
-│   ├── serializers.py        # DRF serializers
-│   ├── views.py              # API view classes
+│   ├── models.py             # Game models (Game, NightmareGame, Guess, NightmareGuess, Pallet)
+│   ├── serializers.py        # DRF serializers for API responses
+│   ├── views.py              # API view classes for both game modes
 │   ├── urls.py               # API URL routing
-│   ├── utils.py              # Helper functions (color_word logic)
+│   ├── utils.py              # Core game logic (color_word, nightmare_color_word)
 │   ├── constants.py          # Game constants loaded from .env
-│   └── words_alpha.txt       # Word list source file
+│   ├── gamepallets.json      # Themed color palette definitions
+│   └── migrations/           # Database migrations including pallet population
 │
 ├── wordle/                   # Main web application
-│   ├── views.py              # Game, Home, and Leaderboard views
+│   ├── views.py              # Game, Home, Leaderboard, and Nightmare views
 │   ├── urls.py               # Web URL routing
 │   ├── static/
-│   │   ├── css/              # Stylesheets with glassmorphism
-│   │   ├── js/               # jQuery game logic
-│   │   └── img/              # Images and assets
+│   │   ├── css/              # Stylesheets with glassmorphism effects
+│   │   │   ├── base.css      # Global styles and navbar
+│   │   │   ├── game.css      # Game board, keyboard, quad-split tiles
+│   │   │   ├── home.css      # Landing page styles
+│   │   │   ├── leaderboard.css  # Rankings display
+│   │   │   ├── login.css     # Authentication pages
+│   │   │   └── profile.css   # User statistics dashboard
+│   │   ├── js/               # Client-side game logic
+│   │   │   └── home.js       # Landing page interactions
+│   │   ├── img/              # Images and assets
+│   │   └── favicon/          # Site icons
 │   └── templates/
-│       ├── base.html         # Base template with navbar
-│       ├── game.html         # Main game interface
+│       ├── base.html         # Base template with navbar and help modal
+│       ├── game.html         # Classic mode interface (4-quadrant tiles)
+│       ├── nightmare.html    # Nightmare mode with challenge mechanics
 │       ├── home.html         # Landing page
 │       └── leaderboard.html  # Player rankings
 │
 ├── accounts/                 # User authentication & profiles
-│   ├── models.py             # UserProfile model with stats
+│   ├── models.py             # UserProfile model with game statistics
 │   ├── views.py              # Login, Signup, Profile views
 │   ├── urls.py               # Account URL routing
 │   └── templates/
@@ -367,7 +410,7 @@ Wordling/
 │
 ├── Wordling/                 # Django project settings
 │   ├── settings.py           # Main configuration file
-│   ├── context_processors.py # Makes constants available in templates
+│   ├── context_processors.py # Makes game constants available in templates
 │   ├── urls.py               # Root URL configuration
 │   └── wsgi.py               # WSGI application entry point
 │
@@ -375,23 +418,76 @@ Wordling/
 ├── .env.example              # Example environment configuration
 ├── manage.py                 # Django management script
 ├── requirements.txt          # Python dependencies
-├── pyproject.toml            # Project metadata
+├── pyproject.toml            # Project metadata (uv/pip)
 ├── db.sqlite3                # SQLite database (generated)
 └── README.md                 # This file
 ```
+
+### Key Files Explained
+
+- **`api/utils.py`** — Contains `color_word()` and `nightmare_color_word()` functions that implement the core guessing logic with support for challenge mechanics
+- **`api/constants.py`** — Centralizes all game configuration loaded from environment variables
+- **`api/gamepallets.json`** — Defines themed color palettes (Google, Discord, Pokemon, Marvel, etc.)
+- **`wordle/templates/game.html`** — Classic mode with 4-quadrant tile system and progressive color revelation
+- **`wordle/templates/nightmare.html`** — Extended game template with challenge-specific UI elements (broken keys, blend toggle, challenge indicators)
+- **`Wordling/context_processors.py`** — Makes constants like `WORD_LENGTH`, `MAX_GUESSES`, animation timings available to all templates
 
 ---
 
 ## How to Play
 
-1. **Visit the homepage** and click "Play" or register for an account to track your stats
-2. **Guess the 5-letter word** in 6 tries or fewer
-3. **Observe the color feedback:**
-   - 🟩 **Green** = Letter is in the word and in the correct position
-   - 🟨 **Yellow** = Letter is in the word but in the wrong position
-   - ⬜ **Gray** = Letter is not in the word at all
-4. **Use the feedback** to make more informed guesses
-5. **Win by guessing the word** before running out of attempts!
+### Classic Mode
+
+1. **Start a game** — Visit [http://localhost:8000/game/](http://localhost:8000/game/)
+2. **Type a 6-digit hex code** using keys 0-9 and A-F (e.g., `4285F4`)
+3. **Press Enter** to submit your guess
+4. **Observe the quad-split feedback:**
+   - Each tile divides into **4 quadrants** (top-left, top-right, bottom-left, bottom-right)
+   - Each quadrant represents one of the 4 hidden colors
+   - **Full color** = Character is in the correct position for that color
+   - **Dimmed color** = Character exists in that color but wrong position
+   - **Black** = Character is not in that color
+5. **Watch the color display** at the top reveal characters as you guess correctly
+6. **Win by deducing all 4 colors** within 9 attempts!
+
+### Nightmare Mode
+
+1. **Start a nightmare game** — Visit [http://localhost:8000/nightmare/](http://localhost:8000/nightmare/)
+2. **Same rules as Classic mode** BUT with a random challenge:
+   - **LIAR** — Some feedback tiles lie to you (probability increases each guess)
+   - **BROKEN** — Three random keys are marked as "broken" (shown in dark red)
+   - **AMNESIA** — All previous feedback erases when you find a correct color
+   - **GLITCH** — One color has swapped "present/absent" feedback
+   - **VAMPIRE** — One color's feedback shown in gray (no color preview)
+3. **Use Blend Toggle** — Combines the 4 quadrant colors into a single blended tile (hover for detailed tooltip)
+4. **Adapt your strategy** based on the challenge type
+
+### Tips & Strategies
+
+- **Start with diverse characters** — Use guesses like `012345` or `ABCDEF` to test many different hex digits
+- **Track partial revelations** — The color display shows `#??4?F?` style progress for each color
+- **Use the keyboard feedback** — Each key button also has 4 quadrants showing its status across all colors
+- **In Nightmare mode:**
+  - **LIAR** — Look for inconsistencies across guesses
+  - **BROKEN** — Avoid the marked keys or use them strategically  
+  - **AMNESIA** — Screenshot your progress before solving colors
+  - **GLITCH** — Focus on one color at a time to identify the glitched one
+  - **VAMPIRE** — The drained color shows as `#666666` but feedback works normally (just gray)
+
+---
+
+## Color Palettes
+
+The game includes themed color palettes from popular brands and franchises:
+
+| Theme | Example Colors |
+|-------|----------------|
+| **Google** | Blue `#4285F4`, Red `#EA4335`, Yellow `#FBBC05`, Green `#34A853` |
+| **Discord** | Blurple `#5865F2`, Yellow `#FEE75C`, Green `#57F287`, Red `#ED4245` |
+| **Pokemon FireRed** | Red `#872214`, Blue `#2514C9`, Teal `#47B09D`, Yellow `#E6BF3E` |
+| **Iron Man** | Red `#AA0404`, Gold `#F1C347`, Dark Gray `#353839`, Silver `#B3B6B7` |
+
+You can add more palettes by editing `api/gamepallets.json` and running migrations.
 
 ---
 
@@ -414,63 +510,67 @@ Wordling/
 **Issue:** Database migration errors
 - **Solution:** Delete `db.sqlite3` and rerun `python manage.py migrate`
 
-**Issue:** Words not loading
-- **Solution:** Ensure `api/words_alpha.txt` exists and run the migration `0004_Populate_words.py`
+**Issue:** Color palettes not loading
+- **Solution:** Ensure `api/gamepallets.json` exists and run migrations again
 
-**Issue:** Changed `GAME_WORD_LENGTH` but wrong word lengths appear
-- **Solution:** Rerun the word population migration to reload words with the correct length:
-  ```bash
-  python manage.py migrate --fake api 0003_word_game_status
-  python manage.py migrate
-  ```
+**Issue:** Game board looks broken or quadrants don't show
+- **Solution:** 
+  - Clear browser cache and hard refresh (Ctrl+Shift+R or Cmd+Shift+R)
+  - Check browser console for JavaScript errors
+  - Ensure jQuery is loading from CDN
+
+**Issue:** Nightmare mode challenges not working
+- **Solution:** Check browser console for errors. The challenge type is passed from backend to frontend JavaScript.
 
 **Issue:** CSRF verification failed
 - **Solution:** Ensure cookies are enabled and you're using the same domain for API calls
 
+**Issue:** Stats not tracking for authenticated users
+- **Solution:** Verify you're logged in and check that migrations have created the UserProfile table
+
 ---
 
-## Contributing
+## Adding Custom Color Palettes
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**!
+You can add your own themed color palettes:
 
-### How to Contribute
-
-1. **Fork the Project**
-2. **Create your Feature Branch**
-   ```bash
-   git checkout -b feature/AmazingFeature
+1. **Edit `api/gamepallets.json`:**
+   ```json
+   [
+     {
+       "name": "My Custom Theme",
+       "theme": "Custom",
+       "codes": ["FF0000", "00FF00", "0000FF", "FFFF00"]
+     }
+   ]
    ```
-3. **Commit your Changes**
-   ```bash
-   git commit -m 'Add some AmazingFeature'
-   ```
-4. **Push to the Branch**
-   ```bash
-   git push origin feature/AmazingFeature
-   ```
-5. **Open a Pull Request**
 
-### Contribution Guidelines
+2. **Run migrations to populate the database:**
+   ```bash
+   python manage.py migrate
+   ```
 
-- Follow PEP 8 style guidelines for Python code
-- Write descriptive commit messages
-- Add tests for new features
-- Update documentation as needed
-- Ensure all tests pass before submitting PR
+3. **Restart the server:**
+   ```bash
+   python manage.py runserver
+   ```
+
+Your new palette will be randomly selected during game creation!
+
+---
+
+## Acknowledgments
+
+- Inspired by the original [Wordle](https://www.nytimes.com/games/wordle/index.html) by Josh Wardle
+- Color palette themes from popular brands and franchises
+- Built with [Django](https://www.djangoproject.com/) and [Django REST Framework](https://www.django-rest-framework.org/)
+- UI inspiration from modern glassmorphism design trends
+- Hexadecimal color code gameplay concept: Original
 
 ---
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## Acknowledgments
-
-- Word list provided by [dwyl/english-words](https://github.com/dwyl/english-words)
-- Inspired by the original [Wordle](https://www.nytimes.com/games/wordle/index.html) by Josh Wardle
-- Built with [Django](https://www.djangoproject.com/) and [Django REST Framework](https://www.django-rest-framework.org/)
-- UI inspiration from modern glassmorphism design trends
 
 ---
