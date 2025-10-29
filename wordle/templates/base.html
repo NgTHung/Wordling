@@ -17,8 +17,10 @@
     <main class="game-container">
         <header>
             <h1><a href="{% url 'game' %}">QUADHEXLE</a></h1>
+            {% block extra_header %}
+            {% endblock %}
         </header>
-        {% if request.resolver_match.view_name == 'game' %}
+        {% if request.resolver_match.view_name == 'game' or request.resolver_match.view_name == 'nightmare' %}
         <div id="confirmation-toast" class="toast">
             <p>Are you sure you want to give up?</p>
             <div class="toast-actions">
@@ -39,12 +41,24 @@
             </button>
         </div>
         <div class="user-actions">
+            <button id="help-button" class="header-button" title="How to Play">
+                <span>Help</span>
+                <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24">
+                    <path fill="currentColor" d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"></path>
+                </svg>
+            </button>
             <a href="{% url 'leaderboard' %}" class="header-button" title="View Leaderboard">
                 <span>Leaderboard</span>
                 <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24">
                     <path fill="currentColor" d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zm-7 9c-1.66 0-3-1.34-3-3V9h6v2c0 1.66-1.34 3-3 3z"></path>
                 </svg>
             </a>
+            {% if request.resolver_match.view_name != "nightmare"%}
+            <a href="{% url 'nightmare' %}" class="header-button" title="Nightmare Mode">
+                <span>Nightmare</span>
+                <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path></svg>
+            </a>
+            {% endif %}
             {% if user.is_authenticated %}
                 <!-- If user is LOGGED IN, show Profile button -->
                 <a href="{% url 'profile' %}" class="header-button" title="View Profile">
@@ -58,12 +72,9 @@
                     <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="currentColor" d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-8v2h8v14z"></path></svg>
                 </a>
             {% endif %}
-            <a href="{% url 'nightmare' %}" class="header-button" title="Nightmare Mode">
-                <span>Nightmare</span>
-                <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path></svg>
-            </a>
         </div>
         {% endif %}
+        
         <!-- This is where the main content of your pages will go. -->
          {% if messages %}
             <div class="messages-container">

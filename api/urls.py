@@ -11,6 +11,11 @@ urlpatterns = [
     path('users/', views.UserList.as_view(), name='user_list'),
     path('users/<int:pk>/', views.UserDetail.as_view(), name='user_detail'),
     path('giveup/', views.GiveUpAPIView.as_view(), name='give_up'),
+    path('nightmare/games/', views.NightmareGameList.as_view(), name='nightmare_game_list'),
+    path('nightmare/games/<int:pk>/', views.NightmareGameDetail.as_view(), name='nightmare_game_detail'),
+    path('nightmare/guesses/', views.NightmareGuessList.as_view(), name='nightmare_guess_list'),
+    path('nightmare/guesses/<int:pk>/', views.NightmareGuessDetail.as_view(), name='nightmare_guess_detail'),
+    path('nightmare/giveup/', views.NightmareGiveUpAPIView.as_view(), name='nightmare_give_up'),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

@@ -48,6 +48,7 @@
     </script>
     <script>
         let toastTimeout;
+        let correctBitmask = '0000';
         function showConfirmationToast() {
             // Clear any existing timer to prevent premature closing
             clearTimeout(toastTimeout);
@@ -103,7 +104,6 @@
             // Get current display text (without HTML)
             const currentLabel = colorBox.find('.color-label').html() || '#??????';
             const currentHex = currentLabel.replace(/<[^>]*>/g, '').substring(1); // Remove # and HTML tags
-            console.log('Current Hex:', currentHex, 'Display Hex:', displayHex);
             // Merge: keep existing chars, only replace ? with new chars
             let mergedHex = '';
             for(let i = 0; i < 6; i++) {
@@ -118,7 +118,6 @@
                     mergedHex += '?';
                 }
             }
-            console.log('Merged Hex:', mergedHex);
             
             // Build HTML with lit/unlit characters
             let labelHtml = '#';
@@ -253,63 +252,115 @@
             return 'Not guessed';
         }
         
+        function updateSingleTileBlend(tileElement) {
+            // Update blend for a single tile without resetting all tooltips
+            if (!isBlendMode) return;
+            
+            const quads = $(tileElement).find('.quad');
+            if (quads.length === 4) {
+                const colors = [];
+                const statuses = [];
+                let hasAnyColor = false;
+                
+                quads.each(function(idx) {
+                    const quad = $(this);
+                    const bgColor = quad.css('background-color');
+                    const status = getColorStatus(idx, quad);
+                    
+                    statuses.push(status);
+                    
+                    if (bgColor && bgColor !== 'rgba(255, 255, 255, 0.1)' && bgColor !== 'transparent' && 
+                        (quad.hasClass('correct') || quad.hasClass('present'))) {
+                        const matches = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                        if (matches) {
+                            const r = parseInt(matches[1]).toString(16).padStart(2, '0');
+                            const g = parseInt(matches[2]).toString(16).padStart(2, '0');
+                            const b = parseInt(matches[3]).toString(16).padStart(2, '0');
+                            colors.push('#' + r + g + b);
+                            hasAnyColor = true;
+                        } else {
+                            colors.push('#ffffff1a');
+                        }
+                    } else {
+                        colors.push('#ffffff1a');
+                    }
+                });
+                
+                let blendedColor = '#ffffff1a';
+                if (hasAnyColor) {
+                    blendedColor = blendColors(colors[0], colors[1], colors[2], colors[3]);
+                }
+                
+                quads.hide();
+                $(tileElement).css('background-color', blendedColor);
+                $(tileElement).data('tooltip-statuses', statuses);
+            }
+        }
+        
+        function applyBlenderToElements() {
+            // Apply blended colors to tiles and keyboard
+            $('.tile, button[data-key]').each(function() {
+                const quads = $(this).find('.quad');
+                if (quads.length === 4) {
+                    // Get colors and statuses from each quadrant
+                    const colors = [];
+                    const statuses = [];
+                    let hasAnyColor = false;
+                    
+                    quads.each(function(idx) {
+                        const quad = $(this);
+                        const bgColor = quad.css('background-color');
+                        const status = getColorStatus(idx, quad);
+                        
+                        statuses.push(status);
+                        
+                        // Convert rgba/rgb to hex or use black for unguessed
+                        if (bgColor && bgColor !== 'rgba(255, 255, 255, 0.1)' && bgColor !== 'transparent' && 
+                            (quad.hasClass('correct') || quad.hasClass('present'))) {
+                            // Extract RGB values
+                            const matches = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                            if (matches) {
+                                const r = parseInt(matches[1]).toString(16).padStart(2, '0');
+                                const g = parseInt(matches[2]).toString(16).padStart(2, '0');
+                                const b = parseInt(matches[3]).toString(16).padStart(2, '0');
+                                colors.push('#' + r + g + b);
+                                hasAnyColor = true;
+                            } else {
+                                colors.push('#ffffff1a');
+                            }
+                        } else {
+                            colors.push('#ffffff1a');
+                        }
+                    });
+                    
+                    // Only blend if there's at least one color, otherwise keep black
+                    let blendedColor = '#ffffff1a';
+                    if (hasAnyColor) {
+                        blendedColor = blendColors(colors[0], colors[1], colors[2], colors[3]);
+                    }
+                    
+                    // Hide quadrants and set blended background
+                    quads.hide();
+                    $(this).css('background-color', blendedColor);
+                    
+                    // Store tooltip data
+                    $(this).data('tooltip-statuses', statuses);
+                }
+            });
+            
+            // Remove old tooltip handlers before setting up new ones
+            $('.tile, button[data-key]').off('mouseenter.customtooltip mouseleave.customtooltip mousemove.customtooltip');
+            
+            // Setup custom tooltip handlers
+            setupCustomTooltip();
+        }
+        
         function toggleBlendMode() {
             isBlendMode = !isBlendMode;
             $('#blend-toggle-button').toggleClass('active', isBlendMode);
             
             if (isBlendMode) {
-                // Apply blended colors to tiles and keyboard
-                $('.tile, button[data-key]').each(function() {
-                    const quads = $(this).find('.quad');
-                    if (quads.length === 4) {
-                        // Get colors and statuses from each quadrant
-                        const colors = [];
-                        const statuses = [];
-                        let hasAnyColor = false;
-                        
-                        quads.each(function(idx) {
-                            const quad = $(this);
-                            const bgColor = quad.css('background-color');
-                            const status = getColorStatus(idx, quad);
-                            
-                            statuses.push(status);
-                            
-                            // Convert rgba/rgb to hex or use black for unguessed
-                            if (bgColor && bgColor !== 'rgba(255, 255, 255, 0.1)' && bgColor !== 'transparent' && 
-                                (quad.hasClass('correct') || quad.hasClass('present'))) {
-                                // Extract RGB values
-                                const matches = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-                                if (matches) {
-                                    const r = parseInt(matches[1]).toString(16).padStart(2, '0');
-                                    const g = parseInt(matches[2]).toString(16).padStart(2, '0');
-                                    const b = parseInt(matches[3]).toString(16).padStart(2, '0');
-                                    colors.push('#' + r + g + b);
-                                    hasAnyColor = true;
-                                } else {
-                                    colors.push('#ffffff1a');
-                                }
-                            } else {
-                                colors.push('#ffffff1a');
-                            }
-                        });
-                        
-                        // Only blend if there's at least one color, otherwise keep black
-                        let blendedColor = '#ffffff1a';
-                        if (hasAnyColor) {
-                            blendedColor = blendColors(colors[0], colors[1], colors[2], colors[3]);
-                        }
-                        
-                        // Hide quadrants and set blended background
-                        quads.hide();
-                        $(this).css('background-color', blendedColor);
-                        
-                        // Store tooltip data
-                        $(this).data('tooltip-statuses', statuses);
-                    }
-                });
-                
-                // Setup custom tooltip handlers
-                setupCustomTooltip();
+                applyBlenderToElements();
             } else {
                 // Restore original quadrant display
                 $('.tile, button[data-key]').each(function() {
@@ -415,7 +466,6 @@
         var currentValue = '';
         var row_idx = 1;
         var col_idx = 1;
-
         const updateKeyboardState = (key, colorIdx, status) => {
             // Initialize state for this key if it doesn't exist
             if (!keyboardState[key]) {
@@ -470,7 +520,7 @@
                     return;
                 }
                 // Submit the current guess
-                $('.row-' + row_idx).addClass('submitted disabled');
+                $('.row-' + row_idx).addClass('submitted');
 
                 const guessToProcess = currentValue;
 
@@ -507,7 +557,18 @@
                                 if(bgColor) {
                                     colorBox.css('background-color', bgColor);
                                 }
-
+                                
+                                // If blender mode is active, update this specific tile
+                                if (isBlendMode && colorIdx === NUM_COLORS - 1) {
+                                    // Only update after all 4 quadrants of this tile are done
+                                    updateSingleTileBlend(tileContainer[0]);
+                                    
+                                    // If this is the last tile, refresh all tooltip handlers
+                                    if (position === 5) {
+                                        $('.tile, button[data-key]').off('mouseenter.customtooltip mouseleave.customtooltip mousemove.customtooltip');
+                                        setupCustomTooltip();
+                                    }
+                                }
                             }, (position * NUM_COLORS + colorIdx) * ANIMATION_TILE_FLIP_STAGGER_MS);
                         }
                     }
@@ -527,46 +588,59 @@
                                 }
                             }
                         }
-
                         // Update color display with correctly guessed characters
                         for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
                             let displayHex = '';
                             let hasAnyCorrect = false;
-                            
+                            let allCorrect = true;   
                             for(let position = 0; position < 6; position++) {
                                 if(result[colorIdx][position] === 'G') {
                                     displayHex += guessToProcess[position].toUpperCase();
                                     hasAnyCorrect = true;
                                 } else {
                                     displayHex += '?';
+                                    allCorrect = false;
                                 }
                             }
-                            
+                            if(allCorrect) {
+                                // Mark this color as fully correct in the bitmask
+                                correctBitmask = correctBitmask.substring(0, colorIdx) + '1' + correctBitmask.substring(colorIdx + 1);
+                            }
                             // Update the display
                             updateColorDisplay(colorIdx, displayHex, displayHex.indexOf('?') < displayHex.length);
                         }
+                        
+                        // If blender mode is active, reapply it to the newly updated row and keyboard
+                        if (isBlendMode) {
+                            // Small delay to ensure DOM is fully updated before reapplying blender
+                            setTimeout(() => {
+                                applyBlenderToElements();
+                            }, 50);
+                        }
 
+                        
                         // Check for a win (all 4 colors correct)
-                        const isWin = result.every(colorResult => colorResult === 'GGGGGG');
-                        if (isWin) {
+                        if (correctBitmask === '1111') {
                             // Bounce animation for all tile containers
                             for(let i = 0; i < 6; i++) {
                                 setTimeout(() => {
                                     currentRow.find('.col-' + (i + 1)).addClass('bounce');
                                 }, i * ANIMATION_BOUNCE_STAGGER_MS); 
                             }
-                            setTimeout(() => showModal(true, guessToProcess), ANIMATION_WIN_MODAL_DELAY_MS); 
+                            setTimeout(() => $.get('/api/games/{{ game_id }}/').done(function(gameData) {
+                                    showModal(true, gameData.colors);
+                                }), ANIMATION_WIN_MODAL_DELAY_MS); 
                         } else {
                             row_idx += 1;
                             col_idx = 1;
                             currentValue = '';
                             if(row_idx > MAX_GUESSES) {
                                 $.get('/api/games/{{ game_id }}/').done(function(gameData) {
-                                    showModal(false, gameData.key);
+                                    showModal(false, gameData.colors);
                                 });
                             }
                         }
-                    }, WORD_LENGTH * ANIMATION_TILE_FLIP_STAGGER_MS); // Wait for all flips to finish
+                    }, (WORD_LENGTH * NUM_COLORS) * ANIMATION_TILE_FLIP_STAGGER_MS); // Wait for all flips to finish (6 tiles × 4 colors)
 
                 }).fail(function(err) {
                     const currentRow = $('.row-' + row_idx);
@@ -680,10 +754,27 @@
                     updateColorDisplay(colorIdx, displayHex, hasAnyCorrect);
                 }
             }
+            $('.row-color-preview[data-row="' + (i + 1) + '"]').css("background", "#"+guessValue);
         }
 
         // Load the actual colors from the game when the page loads
         $(document).ready(function() {
+            
+            // Help modal handlers
+            $('#help-button').on('click', function() {
+                $('#help-modal').addClass('visible');
+            });
+            
+            $('#help-modal-close, #help-close-button').on('click', function() {
+                $('#help-modal').removeClass('visible');
+            });
+            
+            // Close help modal when clicking outside
+            $('#help-modal').on('click', function(e) {
+                if (e.target === this) {
+                    $(this).removeClass('visible');
+                }
+            });
             
             {% if game_id %}
             $.get('/api/games/{{ game_id }}/').done(function(gameData) {
@@ -697,6 +788,43 @@
     </script>
 {% endblock %}
 {% block content%}
+
+<!-- Help Modal -->
+<div id="help-modal" class="modal-overlay">
+    <div class="modal-content help-modal-content">
+        <button class="modal-close" id="help-modal-close">&times;</button>
+        <h2>How to Play</h2>
+        
+        <div class="help-section">
+            <h3>Objective</h3>
+            <p>Guess four 6-digit hex colors in 9 tries.</p>
+        </div>
+        
+        <div class="help-section">
+            <h3>Gameplay</h3>
+            <p>Type hex digits (0-9, A-F) and press Enter. Each tile is divided into 4 quadrants representing the 4 colors:</p>
+            <ul>
+                <li><strong>Full color</strong> — Correct position</li>
+                <li><strong>Dimmed color</strong> — Wrong position</li>
+                <li><strong>Black</strong> — Not in color</li>
+            </ul>
+        </div>
+        
+        <div class="help-section">
+            <h3>Interface</h3>
+            <ul>
+                <li><strong>Color Display (Top)</strong> — Progress tracker</li>
+                <li><strong>Game Board</strong> — 6 tiles per row, each showing one character</li>
+                <li><strong>Keyboard</strong> — Shows used characters with 4-quadrant feedback</li>
+                <li><strong>Blend Toggle </strong> — Combines colors. Hover for status</li>
+                <li><strong>Give Up (Red)</strong> — Reveals answer</li>
+            </ul>
+        </div>
+        
+        <button id="help-close-button" class="modal-button">Got it!</button>
+    </div>
+</div>
+
 <!-- Color Display Section - Shows 4 unknown hex colors -->
 <div id="color-display">
     <div class="color-box" data-color="1">
@@ -718,6 +846,14 @@
 </div>
 
 <!-- Custom Tooltip -->
+<div id="custom-tooltip" class="custom-tooltip">
+    <div class="tooltip-content"></div>
+</div>
+
+</div>
+</div>
+
+<!-- Custom Tooltip for Blend Mode -->
 <div id="custom-tooltip" class="custom-tooltip">
     <div class="tooltip-content"></div>
 </div>

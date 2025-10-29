@@ -3,7 +3,7 @@ from django.views.generic import TemplateView, ListView
 from django.db.models import Max
 
 from accounts.models import UserProfile
-from api.models import Game, Guess, Pallet
+from api.models import Game, Guess, NightmareGame, NightmareGuess, Pallet
 from api.utils import color_word
 from api.constants import LEADERBOARD_PAGE_SIZE
 
@@ -18,7 +18,7 @@ class GameView(TemplateView):
         context['request'] = self.request
         if(self.request.session.get("game_id")):
             try:
-                game = Game.objects.get(id=self.request.session["game_id"], is_nightmare=False)
+                game = Game.objects.get(id=self.request.session["game_id"])
                 if game.status != Game.GameStatus.IN_PROGRESS:
                     del self.request.session["game_id"]
                     return context
@@ -37,7 +37,7 @@ class GameView(TemplateView):
     def get(self, request, *args, **kwargs):
         if request.session.get("game_id"):
             try:
-                game = Game.objects.get(id=request.session["game_id"], is_nightmare=False)
+                game = Game.objects.get(id=request.session["game_id"])
                 if game.status != Game.GameStatus.IN_PROGRESS:
                     del request.session["game_id"]
             except Game.DoesNotExist:
@@ -88,37 +88,42 @@ class NightmareView(TemplateView):
         context['game_history'] = []
         context['pallet_colors'] = None
         context['request'] = self.request
-        if(self.request.session.get("game_id")):
+        if(self.request.session.get("nightmare_game_id")):
             try:
-                game = Game.objects.get(id=self.request.session["game_id"], is_nightmare=True)
-                if game.status != Game.GameStatus.IN_PROGRESS:
-                    del self.request.session["game_id"]
+                game = NightmareGame.objects.get(id=self.request.session["nightmare_game_id"])
+                if game.status != NightmareGame.GameStatus.IN_PROGRESS:
+                    del self.request.session["nightmare_game_id"]
                     return context
                 history = []
-                queryset = Guess.objects.filter(game=game).order_by('created_at').select_related('game__pallet')
+                queryset = NightmareGuess.objects.filter(game=game).order_by('created_at').select_related('game__pallet')
                 for guess in queryset:
                     word_value = guess.value
-                    ret = color_word(word_value, game.pallet.colors)
-                    history.append({'word': word_value, 'result': ret})
-                context['game_id'] = game.pk
+                    history.append({'word': word_value, 'result': guess.color_feedback})
+                context['nightmare_game_id'] = game.pk
                 context['game_history'] = (history)
-            except Game.DoesNotExist:
+                context['challenge'] = game.challenge
+                context['challenge_value'] = ''
+                context['correct_bitmask'] = game.correct_bitmask
+                if game.challenge == NightmareGame.GameChallenge.BROKEN:
+                    context['challenge_value'] = game.challenge_value
+                context['pallet_colors'] = game.pallet.colors
+            except NightmareGame.DoesNotExist:
                 pass
         return context
     def get(self, request, *args, **kwargs):
-        if request.session.get("game_id"):
+        if request.session.get("nightmare_game_id"):
             try:
-                game = Game.objects.get(id=request.session["game_id"], is_nightmare=True)
-                if game.status != Game.GameStatus.IN_PROGRESS:
-                    del request.session["game_id"]
-            except Game.DoesNotExist:
-                del request.session["game_id"]
-        if not request.session.get("game_id"):
+                game = NightmareGame.objects.get(id=request.session["nightmare_game_id"])
+                if game.status != NightmareGame.GameStatus.IN_PROGRESS:
+                    del request.session["nightmare_game_id"]
+            except NightmareGame.DoesNotExist:
+                del request.session["nightmare_game_id"]
+        if not request.session.get("nightmare_game_id"):
             if request.user.is_authenticated:
                 request.session["username"] = request.user.username
-                game = Game.objects.filter(user=request.user, status=Game.GameStatus.IN_PROGRESS).first()
+                game = NightmareGame.objects.filter(user=request.user, status=NightmareGame.GameStatus.IN_PROGRESS).first()
                 if game:
-                    request.session["game_id"] = game.id
+                    request.session["nightmare_game_id"] = game.id
                     return super().get(request, *args, **kwargs)
                 user = request.user
             else:
@@ -126,6 +131,20 @@ class NightmareView(TemplateView):
             max_id = Pallet.objects.aggregate(max_id=Max('id'))['max_id']
             random_id = random.randint(1, max_id)
             pallet = Pallet.objects.filter(id=random_id).first()
-            game = Game.objects.create(user=user, pallet=pallet)
-            request.session["game_id"] = game.id
+            challenge = random.choice([
+                NightmareGame.GameChallenge.LIAR,
+                NightmareGame.GameChallenge.BROKEN,
+                NightmareGame.GameChallenge.AMNESIA,
+                NightmareGame.GameChallenge.GLITCH,
+                NightmareGame.GameChallenge.VAMPIRE,
+            ])
+            challenge_value = ''
+            if challenge == NightmareGame.GameChallenge.BROKEN:
+                challenge_value = ''.join(random.sample('1234567890ABCDEF', 3))
+            elif challenge == NightmareGame.GameChallenge.GLITCH:
+                challenge_value = str(random.randint(0, 3))
+            elif challenge == NightmareGame.GameChallenge.VAMPIRE:
+                challenge_value = str(random.randint(0, 3))
+            game = NightmareGame.objects.create(user=user, pallet=pallet, challenge=challenge, challenge_value=challenge_value)
+            request.session["nightmare_game_id"] = game.id
         return super().get(request, *args, **kwargs)

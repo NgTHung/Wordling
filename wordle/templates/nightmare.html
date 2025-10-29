@@ -3,6 +3,9 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/game.css' %}">
 {% endblock %}
+{% block extra_header %}
+    <span class="nightmare-mode-badge">nightmare</span>
+{% endblock %}
 {% block extra_js %}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <!-- Load game constants from Django context -->
@@ -29,15 +32,33 @@
         const COLOR_CORRECT = 'G';
         const COLOR_PRESENT = 'Y';
         const COLOR_ABSENT = 'B';
+        const COLOR_VAMPIRE_CORRECT = 'V';  // Vampire mode: correct position but no color shown
+        const COLOR_VAMPIRE_PRESENT = 'M';  // Vampire mode: present but no color shown
+        const COLOR_BROKEN_CORRECT = 'S';
+        const COLOR_BROKEN_PRESENT = 'T';
+        const COLOR_BROKEN_ABSENT = 'U';
 
         // Win condition
         const WIN_CONDITION = 'G'.repeat(WORD_LENGTH);
         
         // Store the actual color palette
-        {% if pallet_colors %}
-        const PALLET_COLORS = {{ pallet_colors|safe }};
+        
+        // Nightmare challenge data
+        {% if challenge %}
+        const CHALLENGE = '{{ challenge }}';
+        const CHALLENGE_VALUE = '{{ challenge_value }}';
         {% else %}
-        const PALLET_COLORS = ['000000', '000000', '000000', '000000'];
+        const CHALLENGE = '';
+        const CHALLENGE_VALUE = '';
+        {% endif %}
+
+        {% if pallet_colors %}
+        let PALLET_COLORS = {{ pallet_colors|safe }};
+        if(CHALLENGE === 'VAMPIRE'){
+            PALLET_COLORS[Number(CHALLENGE_VALUE)] = '666666';
+        }
+        {% else %}
+        let PALLET_COLORS = ['000000', '000000', '000000', '000000'];
         {% endif %}
 
         // Set CSS variables for dynamic board sizing
@@ -48,6 +69,7 @@
     </script>
     <script>
         let toastTimeout;
+        let correctBitmask = '{{ correct_bitmask|default:0000 }}';
         function showConfirmationToast() {
             // Clear any existing timer to prevent premature closing
             clearTimeout(toastTimeout);
@@ -89,12 +111,20 @@
                 return 'rgba(' + parseInt(hexColor.substr(0,2), 16) + ',' + 
                        parseInt(hexColor.substr(2,2), 16) + ',' + 
                        parseInt(hexColor.substr(4,2), 16) + ', 0.4)';
+            } else if (status === 'vampire-correct') {
+                // Vampire mode: correct position but show gray instead of color
+                return '#666666';
+            } else if (status === 'vampire-present') {
+                // Vampire mode: present but show dimmed gray
+                return 'rgba(102, 102, 102, 0.4)';
+            } else if (status === 'broken') {
+                // Broken mode: special indicator (dark red)
+                return '#8B0000';
             } else {
                 // Black/default
                 return null;
             }
         }
-        
         // Update color display progressively
         function updateColorDisplay(colorIdx, displayHex, hasCorrect) {
             const colorBox = $('#color-display .color-box[data-color="' + (colorIdx + 1) + '"]');
@@ -103,7 +133,6 @@
             // Get current display text (without HTML)
             const currentLabel = colorBox.find('.color-label').html() || '#??????';
             const currentHex = currentLabel.replace(/<[^>]*>/g, '').substring(1); // Remove # and HTML tags
-            console.log('Current Hex:', currentHex, 'Display Hex:', displayHex);
             // Merge: keep existing chars, only replace ? with new chars
             let mergedHex = '';
             for(let i = 0; i < 6; i++) {
@@ -118,13 +147,12 @@
                     mergedHex += '?';
                 }
             }
-            console.log('Merged Hex:', mergedHex);
             
             // Build HTML with lit/unlit characters
             let labelHtml = '#';
             for(let i = 0; i < 6; i++) {
                 const char = mergedHex[i];
-                if(char !== '?') {
+                if(char !== '?' && char !== '!') {
                     labelHtml += '<span class="lit-char">' + char + '</span>';
                 } else {
                     labelHtml += '?';
@@ -134,24 +162,32 @@
             
             // Calculate how many characters are revealed (0-6)
             const revealedCount = mergedHex.split('').filter(c => c !== '?').length;
+            const brokenCount = mergedHex.split('').filter(c => c === '!').length;
             const swatch = colorBox.find('.color-swatch');
+            if(CHALLENGE === "AMNESIA" && displayHex.split('').filter(c => c !== '?').length === 6) {
+                for(let ci = 0;ci < NUM_COLORS; ci++) {
+                    const cb = $('#color-display .color-box[data-color="' + (ci + 1) + '"]');
+                    cb.find('.color-label').html('#??????');
+                    cb.find('.color-swatch').css('background', 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)').removeClass('lit');
+                }
+                return;
+            }
             
-            if(revealedCount === 0) {
+            if((revealedCount - brokenCount) === 0) {
                 // No characters revealed - keep dimmed background
                 swatch.css('background', 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)');
                 swatch.removeClass('lit');
-            } else if(revealedCount === 6) {
+            } else if((revealedCount - brokenCount) === 6) {
                 // All characters revealed - show full color
                 swatch.css('background', '#' + mergedHex).addClass('lit');
             } else {
                 // Partial reveal - transition from black to color
                 // Calculate opacity based on revealed characters (0% to 100%)
-                const opacity = revealedCount / 6;
-                const lookup = {1: '19', 2: '33', 3: '4D', 4: '66', 5: '80', 6: 'FF'};
+                const lookup = {0: '00',1: '19', 2: '33', 3: '4D', 4: '66', 5: '80', 6: 'FF'};
                 
                 // Create a gradient that transitions from dark to the actual color
                 const fullColor = hexString;
-                swatch.css('background', '#' + fullColor + lookup[revealedCount]);
+                swatch.css('background', '#' + fullColor + lookup[(revealedCount - brokenCount)]);
                 swatch.addClass('lit');
             }
         }
@@ -193,7 +229,7 @@
         $('#toast-confirm-give-up').on('click', function() {
             hideConfirmationToast();
             
-            $.get('/api/giveup/').then(function(data) {
+            $.get('/api/nightmare/giveup/').then(function(data) {
                 showModal(false, data.colors);
             });
         });
@@ -206,7 +242,7 @@
         });
 
         $('#refresh-button').on('click', function() {
-            $.get('/api/giveup/').done(function() {
+            $.get('/api/nightmare/giveup/').done(function() {
                 window.location.reload();
             });
         });
@@ -245,12 +281,121 @@
             // Check the quad's classes to determine status
             if (quadElement.hasClass('correct')) {
                 return 'Correct';
+            } else if (quadElement.hasClass('vampire-correct')) {
+                return 'Vampire Correct';
             } else if (quadElement.hasClass('present')) {
                 return 'Appear in answer';
+            } else if (quadElement.hasClass('vampire-present')) {
+                return 'Vampire Present';
+            } else if (quadElement.hasClass('broken')) {
+                return 'Broken';
             } else if (quadElement.hasClass('absent')) {
                 return 'Wrong';
             }
             return 'Not guessed';
+        }
+        
+        function updateSingleTileBlend(tileElement) {
+            // Update blend for a single tile without resetting all tooltips
+            if (!isBlendMode) return;
+            
+            const quads = $(tileElement).find('.quad');
+            if (quads.length === 4) {
+                const colors = [];
+                const statuses = [];
+                let hasAnyColor = false;
+                
+                quads.each(function(idx) {
+                    const quad = $(this);
+                    const bgColor = quad.css('background-color');
+                    const status = getColorStatus(idx, quad);
+                    
+                    statuses.push(status);
+                    
+                    if (bgColor && bgColor !== 'rgba(255, 255, 255, 0.1)' && bgColor !== 'transparent' && 
+                        (quad.hasClass('correct') || quad.hasClass('present') || 
+                         quad.hasClass('vampire-correct') || quad.hasClass('vampire-present') || 
+                         quad.hasClass('broken'))) {
+                        const matches = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                        if (matches) {
+                            const r = parseInt(matches[1]).toString(16).padStart(2, '0');
+                            const g = parseInt(matches[2]).toString(16).padStart(2, '0');
+                            const b = parseInt(matches[3]).toString(16).padStart(2, '0');
+                            colors.push('#' + r + g + b);
+                            hasAnyColor = true;
+                        } else {
+                            colors.push('#ffffff1a');
+                        }
+                    } else {
+                        colors.push('#ffffff1a');
+                    }
+                });
+                
+                let blendedColor = '#ffffff1a';
+                if (hasAnyColor) {
+                    blendedColor = blendColors(colors[0], colors[1], colors[2], colors[3]);
+                }
+                
+                quads.hide();
+                $(tileElement).css('background-color', blendedColor);
+                $(tileElement).data('tooltip-statuses', statuses);
+            }
+        }
+        
+        function applyBlenderToElements() {
+            // Apply blended colors to tiles and keyboard
+            $('.tile, button[data-key]').each(function() {
+                const quads = $(this).find('.quad');
+                if (quads.length === 4) {
+                    // Get colors and statuses from each quadrant
+                    const colors = [];
+                    const statuses = [];
+                    let hasAnyColor = false;
+                    
+                    quads.each(function(idx) {
+                        const quad = $(this);
+                        const bgColor = quad.css('background-color');
+                        const status = getColorStatus(idx, quad);
+                        
+                        statuses.push(status);
+                        
+                        // Convert rgba/rgb to hex or use black for unguessed
+                        // Include vampire and broken classes in the check
+                        if (bgColor && bgColor !== 'rgba(255, 255, 255, 0.1)' && bgColor !== 'transparent' && 
+                            (quad.hasClass('correct') || quad.hasClass('present') || 
+                             quad.hasClass('vampire-correct') || quad.hasClass('vampire-present') || 
+                             quad.hasClass('broken'))) {
+                            // Extract RGB values
+                            const matches = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                            if (matches) {
+                                const r = parseInt(matches[1]).toString(16).padStart(2, '0');
+                                const g = parseInt(matches[2]).toString(16).padStart(2, '0');
+                                const b = parseInt(matches[3]).toString(16).padStart(2, '0');
+                                colors.push('#' + r + g + b);
+                                hasAnyColor = true;
+                            } else {
+                                colors.push('#ffffff1a');
+                            }
+                        } else {
+                            colors.push('#ffffff1a');
+                        }
+                    });
+                    
+                    // Only blend if there's at least one color, otherwise keep black
+                    let blendedColor = '#ffffff1a';
+                    if (hasAnyColor) {
+                        blendedColor = blendColors(colors[0], colors[1], colors[2], colors[3]);
+                    }
+                    
+                    // Hide quadrants and set blended background
+                    quads.hide();
+                    $(this).css('background-color', blendedColor);
+                    
+                    // Store tooltip data
+                    $(this).data('tooltip-statuses', statuses);
+                }
+            });
+            setupCustomTooltip();
         }
         
         function toggleBlendMode() {
@@ -258,58 +403,7 @@
             $('#blend-toggle-button').toggleClass('active', isBlendMode);
             
             if (isBlendMode) {
-                // Apply blended colors to tiles and keyboard
-                $('.tile, button[data-key]').each(function() {
-                    const quads = $(this).find('.quad');
-                    if (quads.length === 4) {
-                        // Get colors and statuses from each quadrant
-                        const colors = [];
-                        const statuses = [];
-                        let hasAnyColor = false;
-                        
-                        quads.each(function(idx) {
-                            const quad = $(this);
-                            const bgColor = quad.css('background-color');
-                            const status = getColorStatus(idx, quad);
-                            
-                            statuses.push(status);
-                            
-                            // Convert rgba/rgb to hex or use black for unguessed
-                            if (bgColor && bgColor !== 'rgba(255, 255, 255, 0.1)' && bgColor !== 'transparent' && 
-                                (quad.hasClass('correct') || quad.hasClass('present'))) {
-                                // Extract RGB values
-                                const matches = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-                                if (matches) {
-                                    const r = parseInt(matches[1]).toString(16).padStart(2, '0');
-                                    const g = parseInt(matches[2]).toString(16).padStart(2, '0');
-                                    const b = parseInt(matches[3]).toString(16).padStart(2, '0');
-                                    colors.push('#' + r + g + b);
-                                    hasAnyColor = true;
-                                } else {
-                                    colors.push('#ffffff1a');
-                                }
-                            } else {
-                                colors.push('#ffffff1a');
-                            }
-                        });
-                        
-                        // Only blend if there's at least one color, otherwise keep black
-                        let blendedColor = '#ffffff1a';
-                        if (hasAnyColor) {
-                            blendedColor = blendColors(colors[0], colors[1], colors[2], colors[3]);
-                        }
-                        
-                        // Hide quadrants and set blended background
-                        quads.hide();
-                        $(this).css('background-color', blendedColor);
-                        
-                        // Store tooltip data
-                        $(this).data('tooltip-statuses', statuses);
-                    }
-                });
-                
-                // Setup custom tooltip handlers
-                setupCustomTooltip();
+                applyBlenderToElements();
             } else {
                 // Restore original quadrant display
                 $('.tile, button[data-key]').each(function() {
@@ -340,8 +434,14 @@
                         let statusClass = 'status-none';
                         if (status === 'Correct') {
                             statusClass = 'status-correct';
+                        } else if (status === 'Vampire Correct') {
+                            statusClass = 'status-vampire-correct';
                         } else if (status === 'Appear in answer') {
                             statusClass = 'status-present';
+                        } else if (status === 'Vampire Present') {
+                            statusClass = 'status-vampire-present';
+                        } else if (status === 'Broken') {
+                            statusClass = 'status-broken';
                         } else if (status === 'Wrong') {
                             statusClass = 'status-wrong';
                         }
@@ -423,17 +523,27 @@
             }
             
             const prevStatus = keyboardState[key][colorIdx];
+            // Priority: correct > vampire-correct > present > vampire-present > broken > absent
             if(prevStatus === 'correct') {
                 return;
             }
-            if(prevStatus === 'present' && status === 'absent') {
+            if(prevStatus === 'vampire-correct' && status !== 'correct') {
+                return;
+            }
+            if(prevStatus === 'present' && (status === 'absent' || status === 'vampire-present' || status === 'broken')) {
+                return;
+            }
+            if(prevStatus === 'vampire-present' && (status === 'absent' || status === 'broken')) {
+                return;
+            }
+            if(prevStatus === 'broken' && status === 'absent') {
                 return;
             }
             
             keyboardState[key][colorIdx] = status;
             const button = $('button[data-key="' + key.toLowerCase() + '"]');
             const quad = button.find('.quad-' + (colorIdx + 1));
-            quad.removeClass('correct present absent');
+            quad.removeClass('correct present absent vampire-correct vampire-present broken');
             quad.addClass(status);
             
             // Apply the background color
@@ -452,6 +562,7 @@
         });
 
         const handleKeyPress = (key) => {
+            key = String(key);
             key = key.toLowerCase();
             // Accept hex characters (0-9, a-f), enter, and backspace
             const isHexChar = /^[0-9a-f]$/.test(key);
@@ -470,11 +581,11 @@
                     return;
                 }
                 // Submit the current guess
-                $('.row-' + row_idx).addClass('submitted disabled');
+                $('.row-' + row_idx).addClass('submitted');
 
                 const guessToProcess = currentValue;
 
-                $.post('/api/guesses/', { word: guessToProcess }).done(function(data) {
+                $.post('/api/nightmare/guesses/', { word: guessToProcess }).done(function(data) {
                     let result = data.result;
                     const currentRow = $('.row-' + row_idx);
 
@@ -491,13 +602,36 @@
                                 // Determine the result class and color
                                 let statusClass = '';
                                 let bgColor = null;
-                                
+
+                                if(CHALLENGE == "BROKEN") {
+                                    if(CHALLENGE_VALUE.includes(guessToProcess[position].toUpperCase())) {
+                                        if(result[colorIdx][position] === COLOR_CORRECT) {
+                                            result[colorIdx] = result[colorIdx].substr(0, position) + COLOR_BROKEN_CORRECT + result[colorIdx].substr(position + 1);
+                                        } else if(result[colorIdx][position] === COLOR_PRESENT) {
+                                            result[colorIdx] = result[colorIdx].substr(0, position) + COLOR_BROKEN_PRESENT + result[colorIdx].substr(position + 1);
+                                        } else {
+                                            result[colorIdx] = result[colorIdx].substr(0, position) + COLOR_BROKEN_ABSENT + result[colorIdx].substr(position + 1);
+                                        }
+                                    }
+                                }
+
                                 if(result[colorIdx][position] === COLOR_CORRECT) {
                                     statusClass = 'correct';
                                     bgColor = getQuadrantColor(colorIdx, 'correct');
                                 } else if(result[colorIdx][position] === COLOR_PRESENT) {
                                     statusClass = 'present';
                                     bgColor = getQuadrantColor(colorIdx, 'present');
+                                } else if(result[colorIdx][position] === COLOR_VAMPIRE_CORRECT) {
+                                    statusClass = 'vampire-correct';
+                                    bgColor = getQuadrantColor(colorIdx, 'vampire-correct');
+                                } else if(result[colorIdx][position] === COLOR_VAMPIRE_PRESENT) {
+                                    statusClass = 'vampire-present';
+                                    bgColor = getQuadrantColor(colorIdx, 'vampire-present');
+                                } else if(result[colorIdx][position] === COLOR_BROKEN_CORRECT || 
+                                          result[colorIdx][position] === COLOR_BROKEN_PRESENT || 
+                                          result[colorIdx][position] === COLOR_BROKEN_ABSENT){
+                                    statusClass = 'broken';
+                                    bgColor = getQuadrantColor(colorIdx, 'broken');
                                 } else {
                                     statusClass = 'absent';
                                 }
@@ -506,6 +640,12 @@
                                 colorBox.addClass(statusClass);
                                 if(bgColor) {
                                     colorBox.css('background-color', bgColor);
+                                }
+                                
+                                // If blender mode is active, update this specific tile
+                                if (isBlendMode && colorIdx === NUM_COLORS - 1) {
+                                    // Only update after all 4 quadrants of this tile are done
+                                    updateSingleTileBlend(tileContainer[0]);
                                 }
 
                             }, (position * NUM_COLORS + colorIdx) * ANIMATION_TILE_FLIP_STAGGER_MS);
@@ -522,6 +662,14 @@
                                     updateKeyboardState(char, colorIdx, 'correct');
                                 } else if(result[colorIdx][charIdx] === COLOR_PRESENT) {
                                     updateKeyboardState(char, colorIdx, 'present');
+                                } else if(result[colorIdx][charIdx] === COLOR_VAMPIRE_CORRECT) {
+                                    updateKeyboardState(char, colorIdx, 'vampire-correct');
+                                } else if(result[colorIdx][charIdx] === COLOR_VAMPIRE_PRESENT) {
+                                    updateKeyboardState(char, colorIdx, 'vampire-present');
+                                } else if(result[colorIdx][charIdx] === COLOR_BROKEN_ABSENT || 
+                                          result[colorIdx][charIdx] === COLOR_BROKEN_CORRECT || 
+                                          result[colorIdx][charIdx] === COLOR_BROKEN_PRESENT) {
+                                    updateKeyboardState(char, colorIdx, 'broken');
                                 } else {
                                     updateKeyboardState(char, colorIdx, 'absent');
                                 }
@@ -532,41 +680,83 @@
                         for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
                             let displayHex = '';
                             let hasAnyCorrect = false;
+                            let allCorrect = true;
                             
                             for(let position = 0; position < 6; position++) {
-                                if(result[colorIdx][position] === 'G') {
+                                // Check for any type of "correct" feedback (G, V, or S)
+                                if(result[colorIdx][position] === COLOR_CORRECT) {
                                     displayHex += guessToProcess[position].toUpperCase();
                                     hasAnyCorrect = true;
+                                } else if(result[colorIdx][position] === COLOR_BROKEN_CORRECT){
+                                    displayHex += '!';
+                                    hasAnyCorrect = true;
+                                } else if(result[colorIdx][position] === COLOR_VAMPIRE_CORRECT){
+                                    displayHex += '6';
+                                    hasAnyCorrect = true; 
                                 } else {
                                     displayHex += '?';
+                                    allCorrect = false;
+                                }
+                            }
+                            if(allCorrect) {
+                                correctBitmask = correctBitmask.substr(0, colorIdx) + '1' + correctBitmask.substr(colorIdx + 1);
+                                if(CHALLENGE == "AMNESIA"){
+                                    // make all old guesses absent
+                                    for(let r = 1; r <= row_idx; r++) {
+                                        for(let p = 0; p < 6; p++) {
+                                            for(let ci = 0; ci < NUM_COLORS; ci++) {
+                                                const tileContainer = $('.row-' + r + ' .col-' + (p + 1));
+                                                const colorBox = tileContainer.find('.tile-backgrounds .quad-' + (ci + 1));
+                                                colorBox.removeClass('correct present vampire-correct vampire-present broken').addClass('absent');
+                                                colorBox.css('background-color', '');
+                                            }
+                                        }
+                                    }
+                                    // reset keyboard
+                                    keyboardState = {};
+                                    $('button[data-key]').each(function() {
+                                        const quads = $(this).find('.quad');
+                                        quads.removeClass('correct present absent vampire-correct vampire-present broken');
+                                        quads.css('background-color', '');
+                                    });
                                 }
                             }
                             
                             // Update the display
                             updateColorDisplay(colorIdx, displayHex, displayHex.indexOf('?') < displayHex.length);
+
                         }
 
-                        // Check for a win (all 4 colors correct)
-                        const isWin = result.every(colorResult => colorResult === 'GGGGGG');
-                        if (isWin) {
+                        // If blender mode is active, reapply it to the newly updated row and keyboard
+                        if (isBlendMode) {
+                            // Small delay to ensure DOM is fully updated before reapplying blender
+                            setTimeout(() => {
+                                applyBlenderToElements();
+                            }, 50);
+                        }
+                        // Check for a win (all 4 colors have all positions correct)
+                        
+                        if (correctBitmask === '1111') {
                             // Bounce animation for all tile containers
                             for(let i = 0; i < 6; i++) {
                                 setTimeout(() => {
                                     currentRow.find('.col-' + (i + 1)).addClass('bounce');
                                 }, i * ANIMATION_BOUNCE_STAGGER_MS); 
                             }
-                            setTimeout(() => showModal(true, guessToProcess), ANIMATION_WIN_MODAL_DELAY_MS); 
+                            setTimeout(() => $.get('/api/nightmare/games/{{ nightmare_game_id }}/').done(function(gameData) {
+                                    showModal(true, gameData.colors);
+                                }), ANIMATION_WIN_MODAL_DELAY_MS); 
                         } else {
                             row_idx += 1;
                             col_idx = 1;
                             currentValue = '';
                             if(row_idx > MAX_GUESSES) {
-                                $.get('/api/games/{{ game_id }}/').done(function(gameData) {
+                                $.get('/api/nightmare/games/{{ nightmare_game_id }}/').done(function(gameData) {
                                     showModal(false, gameData.key);
                                 });
                             }
                         }
-                    }, WORD_LENGTH * ANIMATION_TILE_FLIP_STAGGER_MS); // Wait for all flips to finish
+                    }, (WORD_LENGTH * NUM_COLORS) * ANIMATION_TILE_FLIP_STAGGER_MS); // Wait for all flips to finish
 
                 }).fail(function(err) {
                     const currentRow = $('.row-' + row_idx);
@@ -628,18 +818,40 @@
                 const tileContainer = $('.row-' + rowIdx + ' .col-' + (position + 1)).find(".tile-content");
                 tileContainer.text(char.toUpperCase()); 
                 for(let colorIdx = 0; colorIdx < NUM_COLORS; colorIdx++) {
-                    const charIdx = colorIdx * 6 + position;
                     const colorBox = $('.row-' + rowIdx + ' .col-' + (position + 1)).find('.tile-backgrounds .quad-' + (colorIdx + 1));
 
                     let statusClass = '';
                     let bgColor = null;
                     
-                    if(result[colorIdx][position] === 'G') {
+                    if(CHALLENGE == "BROKEN") {
+                        if(CHALLENGE_VALUE.includes(guessValue[position].toUpperCase())) {
+                            if(result[colorIdx][position] === COLOR_CORRECT) {
+                                result[colorIdx] = result[colorIdx].substr(0, position) + COLOR_BROKEN_CORRECT + result[colorIdx].substr(position + 1);
+                            } else if(result[colorIdx][position] === COLOR_PRESENT) {
+                                result[colorIdx] = result[colorIdx].substr(0, position) + COLOR_BROKEN_PRESENT + result[colorIdx].substr(position + 1);
+                            } else {
+                                result[colorIdx] = result[colorIdx].substr(0, position) + COLOR_BROKEN_ABSENT + result[colorIdx].substr(position + 1);
+                            }
+                        }
+                    }
+
+                    if(result[colorIdx][position] === COLOR_CORRECT) {
                         statusClass = 'correct';
                         bgColor = getQuadrantColor(colorIdx, 'correct');
-                    } else if(result[colorIdx][position] === 'Y') {
+                    } else if(result[colorIdx][position] === COLOR_PRESENT) {
                         statusClass = 'present';
                         bgColor = getQuadrantColor(colorIdx, 'present');
+                    } else if(result[colorIdx][position] === COLOR_VAMPIRE_CORRECT) {
+                        statusClass = 'vampire-correct';
+                        bgColor = getQuadrantColor(colorIdx, 'vampire-correct');
+                    } else if(result[colorIdx][position] === COLOR_VAMPIRE_PRESENT) {
+                        statusClass = 'vampire-present';
+                        bgColor = getQuadrantColor(colorIdx, 'vampire-present');
+                    } else if(result[colorIdx][position] === COLOR_BROKEN_CORRECT || 
+                              result[colorIdx][position] === COLOR_BROKEN_PRESENT || 
+                              result[colorIdx][position] === COLOR_BROKEN_ABSENT) {
+                        statusClass = 'broken';
+                        bgColor = getQuadrantColor(colorIdx, 'broken');
                     } else {
                         statusClass = 'absent';
                     }
@@ -650,10 +862,18 @@
                     }
                     
                     const lowerChar = char.toLowerCase();
-                    if(result[colorIdx][position] === 'G') {
+                    if(result[colorIdx][position] === COLOR_CORRECT) {
                         updateKeyboardState(lowerChar, colorIdx, 'correct');
-                    } else if(result[colorIdx][position] === 'Y') {
+                    } else if(result[colorIdx][position] === COLOR_PRESENT) {
                         updateKeyboardState(lowerChar, colorIdx, 'present');
+                    } else if(result[colorIdx][position] === COLOR_VAMPIRE_CORRECT) {
+                        updateKeyboardState(lowerChar, colorIdx, 'vampire-correct');
+                    } else if(result[colorIdx][position] === COLOR_VAMPIRE_PRESENT) {
+                        updateKeyboardState(lowerChar, colorIdx, 'vampire-present');
+                    } else if(result[colorIdx][position] === COLOR_BROKEN_ABSENT || 
+                              result[colorIdx][position] === COLOR_BROKEN_CORRECT || 
+                              result[colorIdx][position] === COLOR_BROKEN_PRESENT) {
+                        updateKeyboardState(lowerChar, colorIdx, 'broken');
                     } else {
                         updateKeyboardState(lowerChar, colorIdx, 'absent');
                     }
@@ -667,8 +887,14 @@
                 let hasAnyCorrect = false;
                 
                 for(let position = 0; position < 6; position++) {
-                    if(result[colorIdx][position] === 'G') {
+                    if(result[colorIdx][position] === COLOR_CORRECT) {
                         displayHex += guessValue[position].toUpperCase();
+                        hasAnyCorrect = true;
+                    } else if(result[colorIdx][position] === COLOR_BROKEN_CORRECT) {
+                        displayHex += '!';
+                        hasAnyCorrect = true;
+                    } else if(result[colorIdx][position] === COLOR_VAMPIRE_CORRECT){
+                        displayHex += '6';
                         hasAnyCorrect = true;
                     } else {
                         displayHex += '?';
@@ -680,13 +906,39 @@
                     updateColorDisplay(colorIdx, displayHex, hasAnyCorrect);
                 }
             }
+            $('.row-color-preview[data-row="' + (i + 1) + '"]').css("background", "#"+guessValue);
         }
 
         // Load the actual colors from the game when the page loads
         $(document).ready(function() {
             
-            {% if game_id %}
-            $.get('/api/games/{{ game_id }}/').done(function(gameData) {
+            // Mark broken keys if BROKEN challenge is active
+            if (CHALLENGE === 'BROKEN' && CHALLENGE_VALUE) {
+                const brokenKeys = CHALLENGE_VALUE.toLowerCase().split('');
+                brokenKeys.forEach(key => {
+                    const button = $('button[data-key="' + key + '"]');
+                    button.addClass('key-broken');
+                });
+            }
+            
+            // Help modal handlers
+            $('#help-button').on('click', function() {
+                $('#help-modal').addClass('visible');
+            });
+            
+            $('#help-modal-close, #help-close-button').on('click', function() {
+                $('#help-modal').removeClass('visible');
+            });
+            
+            // Close help modal when clicking outside
+            $('#help-modal').on('click', function(e) {
+                if (e.target === this) {
+                    $(this).removeClass('visible');
+                }
+            });
+            
+            {% if nightmare_game_id %}
+            $.get('/api/nightmare/games/{{ nightmare_game_id }}/').done(function(gameData) {
                 if (gameData.status && gameData.status !== 'IN_PROGRESS') {
                     // Game is over, reveal the hex codes
                     revealColors();
@@ -697,6 +949,55 @@
     </script>
 {% endblock %}
 {% block content%}
+
+<!-- Help Modal -->
+<div id="help-modal" class="modal-overlay">
+    <div class="modal-content help-modal-content">
+        <button class="modal-close" id="help-modal-close">&times;</button>
+        <h2>How to Play - NIGHTMARE MODE</h2>
+        
+        <div class="help-section">
+            <h3>Objective</h3>
+            <p>Guess four 6-digit hex colors in 9 tries. <strong>Warning:</strong> Each game has a random challenge that makes it harder!</p>
+        </div>
+        
+        <div class="help-section">
+            <h3>Gameplay</h3>
+            <p>Type hex digits (0-9, A-F) and press Enter. Each tile is divided into 4 quadrants representing the 4 colors:</p>
+            <ul>
+                <li><strong>Full color</strong> — Correct position</li>
+                <li><strong>Dimmed color</strong> — Wrong position</li>
+                <li><strong>Gray (full/dimmed)</strong> — Vampire mode: correct/present but color hidden</li>
+                <li><strong>Dark red</strong> — Broken keys (marked by challenge)</li>
+                <li><strong>Black</strong> — Not in color</li>
+            </ul>
+        </div>
+        
+        <div class="help-section">
+            <h3>Nightmare Challenges</h3>
+            <ul>
+                <li><strong>LIAR</strong> — Some feedback may be false (increases per guess)</li>
+                <li><strong>BROKEN</strong> — Three random keys are marked as "broken"</li>
+                <li><strong>AMNESIA</strong> — Past feedback erased when you find correct positions</li>
+                <li><strong>GLITCH</strong> — One color's absent/present feedback is swapped</li>
+                <li><strong>VAMPIRE</strong> — One color's feedback shown in gray (no color reveal, replace by 666666)</li>
+            </ul>
+        </div>
+        
+        <div class="help-section">
+            <h3>Interface</h3>
+            <ul>
+                <li><strong>Color Display (Top)</strong> — Progress tracker</li>
+                <li><strong>Game Board</strong> — 6 tiles per row, each showing one character</li>
+                <li><strong>Keyboard</strong> — Shows used characters with 4-quadrant feedback</li>
+                <li><strong>Blend Toggle </strong> — Combines colors. Hover for status</li>
+                <li><strong>Give Up (Red)</strong> — Reveals answer</li>
+            </ul>
+        </div>
+        
+        <button id="help-close-button" class="modal-button">Got it!</button>
+    </div>
+</div>
 <!-- Color Display Section - Shows 4 unknown hex colors -->
 <div id="color-display">
     <div class="color-box" data-color="1">
@@ -909,6 +1210,10 @@
 <div id="game-modal" class="modal-overlay">
     <div class="modal-content">
         <h2 id="modal-title">You Won!</h2>
+        <div id="modal-challenge" class="modal-challenge-reveal">
+            <span class="challenge-label">Challenge:</span>
+            <span class="challenge-value">{{ challenge }}</span>
+        </div>
         <div id="modal-colors" class="modal-color-display">
             <div class="modal-color-item">
                 <div class="modal-color-swatch" data-color="1"></div>

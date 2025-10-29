@@ -13,12 +13,12 @@ env.read_env()
 # ===== Game Rules =====
 """Core game mechanics that define how Quadhexle gameplay works"""
 WORD_LENGTH = int(env('GAME_WORD_LENGTH', default=6))
-MAX_GUESSES = int(env('GAME_MAX_GUESSES', default=6))
+MAX_GUESSES = int(env('GAME_MAX_GUESSES', default=9))
 
 # ===== Animation Timings (milliseconds) =====
 """Frontend animation timing values for smooth UX"""
 ANIMATION_SHAKE_MS = int(env('ANIMATION_SHAKE_MS', default=600))
-ANIMATION_TILE_FLIP_STAGGER_MS = int(env('ANIMATION_TILE_FLIP_STAGGER_MS', default=350))
+ANIMATION_TILE_FLIP_STAGGER_MS = int(env('ANIMATION_TILE_FLIP_STAGGER_MS', default=100))
 ANIMATION_BOUNCE_STAGGER_MS = int(env('ANIMATION_BOUNCE_STAGGER_MS', default=100))
 ANIMATION_WIN_MODAL_DELAY_MS = int(env('ANIMATION_WIN_MODAL_DELAY_MS', default=1200))
 ANIMATION_MODAL_DELAY_MS = int(env('ANIMATION_MODAL_DELAY_MS', default=200))
@@ -43,6 +43,9 @@ GUESS_DISTRIBUTION_SIZE = MAX_GUESSES
 COLOR_CORRECT = 'G'      # Green - letter in correct position
 COLOR_PRESENT = 'Y'      # Yellow - letter in word but wrong position
 COLOR_ABSENT = 'B'       # Black/Absent - letter not in word
+COLOR_BROKEN = 'S'  # Special color for nightmare mode feedback
+COLOR_VAMPIRE_CORRECT = 'V'    # Vampire correct - shows as green but no hex color
+COLOR_VAMPIRE_PRESENT = 'M'    # Vampire present - shows as yellow but no hex color
 
 # ===== Statistics Multipliers =====
 WIN_PERCENTAGE_MULTIPLIER = 100

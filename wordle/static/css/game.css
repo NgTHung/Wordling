@@ -305,6 +305,26 @@
     font-size: 0.9rem;
 }
 
+/* Broken key styling (visual indicator only, still pressable) */
+.keyboard-row button.key-broken {
+    border-color: #8B0000;
+    background-color: rgba(139, 0, 0, 0.15);
+}
+
+.keyboard-row button.key-broken .key-text {
+    color: #ff6b6b;
+    position: relative;
+}
+
+.keyboard-row button.key-broken .key-text::after {
+    content: '⚠';
+    position: absolute;
+    top: -8px;
+    right: -12px;
+    font-size: 0.7rem;
+    color: #ff0000;
+}
+
 /* 4-quadrant background for keyboard keys */
 .key-backgrounds {
     position: absolute;
@@ -358,6 +378,12 @@
     .char {
         font-size: 0.85rem;
     }
+    
+    .nightmare-mode-badge {
+        margin-left: 8px;
+        padding: 3px 8px;
+        font-size: 0.45rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -387,10 +413,54 @@
     .char {
         font-size: 0.8rem;
     }
+    
+    .nightmare-mode-badge {
+        margin-left: 6px;
+        padding: 2px 6px;
+        font-size: 0.4rem;
+        letter-spacing: 0.5px;
+    }
 }
 
 /* --- GAME STATE INDICATORS --- */
 .board-row.disabled {
     pointer-events: none;
     /* opacity: 0.7; */
+}
+
+/* --- NIGHTMARE MODE INDICATOR --- */
+.nightmare-mode-badge {
+    display: inline-block;
+    margin-left: 12px;
+    padding: 4px 10px;
+    font-size: 1rem;
+    font-weight: 600; 
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 4px;
+    border: 1px solid rgba(139, 0, 139, 0.3);
+    vertical-align: middle;
+    opacity: 0.7;
+}
+
+/* Vampire/Broken quadrant styles */
+.quad.vampire-correct,
+.quad.vampire-present {
+    border: 1px solid #666;
+}
+
+.quad.broken {
+    border: 1px solid #8B0000;
+    position: relative;
+}
+
+.quad.broken::after {
+    content: '⚠';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.6rem;
+    color: #ff0000;
+    opacity: 0.7;
 }
