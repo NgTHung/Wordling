@@ -562,7 +562,7 @@ Your new palette will be randomly selected during game creation!
 ## Acknowledgments
 
 - Inspired by the original [Wordle](https://www.nytimes.com/games/wordle/index.html) by Josh Wardle
-- Color palette themes from popular brands and franchises
+- Color palette themes from popular brands and franchises and generated using [Colormind API](http://colormind.io/)
 - Built with [Django](https://www.djangoproject.com/) and [Django REST Framework](https://www.django-rest-framework.org/)
 - UI inspiration from modern glassmorphism design trends
 - Hexadecimal color code gameplay concept: Original
