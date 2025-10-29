@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from api.constants import MAX_GUESSES, WIN_PERCENTAGE_MULTIPLIER
-from api.models import Game
+from api.models import Game, NightmareGame
 
 def get_default_guess_distribution():
     return [0] * MAX_GUESSES
@@ -26,7 +26,7 @@ class UserProfile(models.Model):
         return round((self.games_won / self.games_played) * WIN_PERCENTAGE_MULTIPLIER)
     @property
     def games_played(self):
-        return Game.objects.filter(user=self.user).count()
+        return Game.objects.filter(user=self.user).count() + NightmareGame.objects.filter(user=self.user).count()
     
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):

@@ -90,7 +90,7 @@
             
 
             const currentLabel = colorBox.find('.color-label').html() || '#??????';
-            const currentHex = currentLabel.replace(/<[^>]*>/g, '').substring(1
+            const currentHex = currentLabel.replace(/<[^>]*>/g, '').substring(1)
 
             let mergedHex = '';
             for(let i = 0; i < 6; i++) {
@@ -627,14 +627,14 @@
                                 });
                             }
                         }
-                    }, (WORD_LENGTH * NUM_COLORS) * ANIMATION_TILE_FLIP_STAGGER_MS
+                    }, (WORD_LENGTH * NUM_COLORS) * ANIMATION_TILE_FLIP_STAGGER_MS)
 
                 }).fail(function(err) {
                     const currentRow = $('.row-' + row_idx);
                     currentRow.addClass('shake invalid');
                     setTimeout(() => {
                         currentRow.removeClass('shake invalid');
-                    }, 700
+                    }, 700)
 
 
                     currentRow.removeClass('submitted disabled');
