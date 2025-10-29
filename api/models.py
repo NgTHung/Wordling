@@ -3,7 +3,7 @@ from django.conf import settings
 # Create your models here.
 
 class Pallet(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     colors = models.JSONField()
 
     def __str__(self):
